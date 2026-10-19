@@ -15,7 +15,7 @@ st.markdown("""<style>
 }
 [data-testid="stHeader"] { background: rgba(11,17,32,.94) !important; }
 [data-testid="stSidebar"], [data-testid="stSidebarContent"] { background: #101c30 !important; }
-.block-container { max-width: 1500px; padding-top: 2.3rem; padding-bottom: 4rem; }
+.block-container { max-width: 1500px; padding-top: 1.1rem; padding-bottom: 2rem; }
 h1 { letter-spacing: -.045em; font-weight: 800 !important; }
 h2,h3 { letter-spacing: -.025em; }
 [data-testid="stApp"] label, [data-testid="stApp"] [data-testid="stWidgetLabel"],
@@ -45,7 +45,7 @@ h2,h3 { letter-spacing: -.025em; }
 [data-testid="stAlert"] { border-radius: 12px !important; }
 [data-testid="stMetric"] {
   background: #13233a; border: 1px solid #2c4667;
-  border-radius: 13px; padding: 14px 18px;
+  border-radius: 13px; padding: 9px 13px;
 }
 div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {
   border-radius: 10px !important; font-weight: 700 !important;
@@ -66,16 +66,16 @@ div[data-testid="stDownloadButton"] button:disabled {
 }
 div[data-testid="stDownloadButton"] button:disabled * { color: #cbd5e1 !important; }
 .gt-hero {
-  padding: 22px 26px; border: 1px solid #2b4769; border-radius: 18px;
+  padding: 14px 20px; border: 1px solid #2b4769; border-radius: 18px;
   background: linear-gradient(115deg,#162943 0%,#101c31 75%);
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
 .gt-eyebrow { color: #7ec8ff; font-size: .76rem; font-weight: 800; letter-spacing: .14em; }
 .gt-hero h1 { margin: 6px 0 4px; color: #f8fbff; font-size: clamp(1.8rem,3vw,2.6rem); }
 .gt-hero p { color: #afc4dd; margin: 0; }
-.gt-steps { display:flex; flex-wrap:wrap; gap:10px; margin: 8px 0 24px; }
+.gt-steps { display:flex; flex-wrap:wrap; gap:10px; margin: 4px 0 12px; }
 .gt-step {
-  flex:1; min-width:155px; padding:12px 15px; border-radius:12px;
+  flex:1; min-width:155px; padding:8px 12px; border-radius:12px;
   background:#13233a; border:1px solid #2b405e; color:#dbe8f7;
   font-size:.88rem; font-weight:600;
 }
@@ -97,7 +97,7 @@ st.markdown("""<div class="gt-hero">
 <div class="gt-step"><b>03</b> Gerar XML</div>
 </div>""", unsafe_allow_html=True)
 st.caption("🔒 Use somente arquivos autorizados. Confira os dados antes de importar no sistema de destino.")
-st.markdown("### Painel de processamento")
+st.markdown("#### Painel de processamento")
 painel_upload, painel_resumo = st.columns([1, 2], gap="large")
 with painel_upload:
     st.markdown("#### 📤 Enviar documento")
@@ -253,22 +253,25 @@ if arquivo is not None:
                             ausentes = sorted(set(range(1, max(nums) + 1)) - nums)
                             if ausentes:
                                 st.caption("Números de sequência não reconhecidos com segurança (não representam necessariamente produtos ausentes): " + ", ".join(map(str, ausentes)))
-        a, b, c = st.columns(3)
         names = list(df.columns)
-        with a:
-            codigo = st.selectbox("Coluna do código do produto", names, index=0)
-        with b:
-            descricao = st.selectbox("Coluna da descrição", names, index=1)
-        with c:
-            quantidade = st.selectbox("Coluna da quantidade", names, index=2)
+        # Para arquivos com as três colunas padrão, o mapeamento é automático.
+        codigo, descricao, quantidade = names[:3]
+        with st.expander("⚙️ Mapeamento de colunas e exportação CSV (opcional)", expanded=False):
+            a, b, c = st.columns(3, gap="small")
+            with a:
+                codigo = st.selectbox("Código", names, index=0)
+            with b:
+                descricao = st.selectbox("Descrição", names, index=1)
+            with c:
+                quantidade = st.selectbox("Quantidade", names, index=2)
+            if tipo_entrada == "PDF (OCR)" and erp == "MV" and not df.empty:
+                st.download_button("Baixar conferência CSV", data=df.to_csv(index=False, sep=";").encode("utf-8-sig"), file_name="conferencia_mv.csv", mime="text/csv")
         if len({codigo, descricao, quantidade}) != 3:
             st.error("Escolha três colunas diferentes.")
             st.stop()
         items = df[[codigo, descricao, quantidade]].copy()
         items.columns = ["Código", "Descrição", "Quantidade"]
         items = items.fillna("")
-        if tipo_entrada == "PDF (OCR)" and erp == "MV" and not df.empty:
-            st.download_button("Baixar conferência dos itens identificados (CSV)", data=df.to_csv(index=False, sep=";").encode("utf-8-sig"), file_name="conferencia_mv.csv", mime="text/csv")
         st.markdown("### 🧾 Conferir produtos")
         m1, m2, m3 = st.columns(3)
         m1.metric("Produtos extraídos", len(items))
@@ -278,7 +281,7 @@ if arquivo is not None:
         st.caption("Linhas preenchidas não significam itens conferidos. A revisão com o documento original é obrigatória.")
         st.caption(f"Arquivo: {arquivo.name} • {len(items)} itens identificados")
         st.caption("Você pode editar diretamente na tabela antes de gerar o XML. As descrições serão mantidas exatamente como aparecem na tabela, inclusive acentos e espaços.")
-        reviewed = st.data_editor(items, hide_index=True, num_rows="dynamic", use_container_width=True, key="xml_editor", height=440)
+        reviewed = st.data_editor(items, hide_index=True, num_rows="dynamic", use_container_width=True, key="xml_editor", height=370)
         if tipo_entrada == "PDF (OCR)" and not df.empty:
             st.warning(f"O OCR encontrou {len(df)} item(ns). Confira no PDF se há mais itens e se todas as quantidades estão corretas.")
         cleaned = reviewed.copy()
