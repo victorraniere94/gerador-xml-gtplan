@@ -12,8 +12,8 @@ NUMERO = re.compile(r"\d{1,3}(?:\.\d{3})*,\d+|\d+(?:[.,]\d+)?")
 
 def extract_mv(data):
     pdf = fitz.open(stream=data, filetype="pdf")
-    if pdf.page_count > 15:
-        raise ValueError("O limite é de 15 páginas por PDF.")
+    if pdf.page_count > 100:
+        raise ValueError("O limite de segurança é de 100 páginas por PDF. Divida o arquivo em partes menores.")
     rows = []
     for page_number, page in enumerate(pdf, start=1):
         pix = page.get_pixmap(matrix=fitz.Matrix(3, 3), alpha=False)
