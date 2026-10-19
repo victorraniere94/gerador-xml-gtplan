@@ -138,10 +138,12 @@ def load_table(upload):
     return df
 
 def clean_xml_text(value):
-    text = unicodedata.normalize('NFKD', str(value))
-    text = ''.join(char for char in text if not unicodedata.combining(char))
-    text = text.replace('ß', 'ss').replace('Æ', 'AE').replace('æ', 'ae').replace('ø', 'o').replace('Ø', 'O')
-    text = re.sub(r'[^A-Za-z0-9 /%.,+()_:\\-]', '', text)
+    """Preserva a descrição literal; XML/ISO-8859-1 não exige retirar acentos."""
+    text = str(value)
+    # XML 1.0 não permite controles C0 (exceto tab, CR e LF).
+    text = "".join(ch for ch in text if ch in "\\t\\n\\r" or ord(ch) >= 32)
+    # Impede substituição silenciosa de caracteres incompatíveis com o layout.
+    text.encode("iso-8859-1", errors="strict")
     return text
 
 
@@ -233,13 +235,16 @@ if arquivo is not None:
             st.download_button("Baixar conferência dos itens identificados (CSV)", data=df.to_csv(index=False, sep=";").encode("utf-8-sig"), file_name="conferencia_mv.csv", mime="text/csv")
         st.markdown("### 3. Conferir produtos")
         st.caption(f"Arquivo: {arquivo.name} • {len(items)} itens identificados")
-        st.caption("Você pode editar diretamente na tabela antes de gerar o XML. Acentos, cedilha e símbolos não permitidos serão removidos automaticamente apenas do XML.")
+        st.caption("Você pode editar diretamente na tabela antes de gerar o XML. As descrições serão mantidas exatamente como aparecem na tabela, inclusive acentos e espaços.")
         reviewed = st.data_editor(items, hide_index=True, num_rows="dynamic", use_container_width=True, key="xml_editor")
         if tipo_entrada == "PDF (OCR)" and not df.empty:
             st.warning(f"O OCR encontrou {len(df)} item(ns). Confira no PDF se há mais itens e se todas as quantidades estão corretas.")
         cleaned = reviewed.copy()
         for col in cleaned.columns:
-            cleaned[col] = cleaned[col].astype(str).str.strip()
+            cleaned[col] = cleaned[col].astype(str)
+        # Descrições oficiais podem conter espaços significativos no final.
+        cleaned["Código"] = cleaned["Código"].str.strip()
+        cleaned["Quantidade"] = cleaned["Quantidade"].str.strip()
         errors = []
         if not re.fullmatch(r"\d{2}:\d{2}", hora.strip()):
             errors.append("A hora deve estar no formato HH:MM.")
