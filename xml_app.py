@@ -11,9 +11,17 @@ st.title("Gerador de XML — GTPlan")
 st.caption("Layout WA • Arquivos processados nesta sessão • Não envie dados confidenciais até validação interna.")
 st.info("Use apenas planilhas autorizadas. Este aplicativo pode ser acessado por qualquer pessoa com o endereço público.")
 
-tipo_entrada = st.radio("Formato do arquivo de origem", ["Excel / CSV", "PDF (OCR)"], horizontal=True)
+col_formato, col_erp = st.columns(2)
+with col_formato:
+    tipo_entrada = st.radio("Formato do arquivo de origem", ["Excel / CSV", "PDF (OCR)"], horizontal=True)
+with col_erp:
+    if tipo_entrada == "PDF (OCR)":
+        erp = st.selectbox("ERP de origem", ["MV", "SPData", "Syshosp", "SMED"])
+    else:
+        erp = None
+        st.caption("ERP de origem: não se aplica a Excel / CSV")
+
 if tipo_entrada == "PDF (OCR)":
-    erp = st.selectbox("Selecione o ERP de origem do PDF", ["MV", "SPData", "Syshosp", "SMED"])
     arquivo = st.file_uploader("Enviar PDF da requisição (até 10 MB)", type=["pdf"], key="pdf_upload")
     if erp != "MV":
         st.warning(f"A leitura automática do ERP {erp} ainda não foi configurada. Por enquanto, utilize o modelo MV ou Excel/CSV.")
