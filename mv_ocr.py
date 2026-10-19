@@ -104,4 +104,5 @@ def extract_mv(data):
                 })
     result = pd.DataFrame(rows, columns=["Código", "Descrição", "Quantidade"])
     result.attrs["mv_sequences"] = detected_sequences
+    result.attrs["mv_product_rows"] = len(rows)
     return result
