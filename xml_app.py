@@ -11,14 +11,15 @@ st.title("Gerador de XML — GTPlan")
 st.caption("Layout WA • Arquivos processados nesta sessão • Não envie dados confidenciais até validação interna.")
 st.info("Use apenas planilhas autorizadas. Este aplicativo pode ser acessado por qualquer pessoa com o endereço público.")
 
+arquivo = st.file_uploader("Importe Excel (.xlsx) ou CSV com código, descrição e quantidade (máximo 10 MB)", type=["xlsx", "csv"])
+st.caption("A quantidade deve ser a quantidade final solicitada, sem multiplicação por embalagem. Códigos e descrições são mantidos como texto.")
+
 complemento = st.text_input("Complemento opcional do código dos produtos", placeholder="Ex.: POLICLINICA", help="Será acrescentado ao final de cada Codigo_Produto no XML.")
 hora = st.text_input("Hora de vencimento", value="15:41")
 titulo = st.text_input("Título da PDC (opcional)")
 observacao = st.text_area("Observação (opcional)", height=75)
 campo_extra_nome = st.text_input("Nome do campo extra", value="Não Programada")
 campo_extra_valor = st.text_input("Valor do campo extra (opcional)")
-arquivo = st.file_uploader("Importe Excel (.xlsx) ou CSV com código, descrição e quantidade (máximo 10 MB)", type=["xlsx", "csv"])
-st.caption("A quantidade deve ser a quantidade final solicitada, sem multiplicação por embalagem. Códigos e descrições são mantidos como texto.")
 
 def load_table(upload):
     raw = upload.getvalue()
