@@ -38,6 +38,8 @@ def extract_mv(data):
         for x, y, word in tokens:
             if not (.365 < x < .43 and NUMERO.fullmatch(word)):
                 continue
+            if any(xx < .02 and abs(yy-y) < 13 and "rateio" in w.lower() for xx, yy, w in tokens):
+                continue
             if not any(.07 < xx < .265 and abs(yy-y) < 13
                        and re.search(r"[A-Za-zÀ-ÿ]", w)
                        for xx, yy, w in tokens):
@@ -61,6 +63,25 @@ def extract_mv(data):
                          if m]
                 if fused:
                     code = min(fused)[1]
+            if not code or len(code) <= 2:
+                strip = image.crop((int(width*.006), max(0, int(y-12)),
+                                    int(width*.072), min(image.height, int(y+17))))
+                raw_strip = pytesseract.image_to_string(
+                    strip.resize((strip.width*2, strip.height*2)),
+                    lang="por", config="--psm 6"
+                )
+                nums = re.findall(r"\d+", raw_strip)
+                seq_raw = sorted((abs(yy-y), w) for xx, yy, w in tokens
+                                 if xx < .026 and abs(yy-y) < 15
+                                 and re.fullmatch(r"\d{1,3}", w))
+                seq_text = seq_raw[0][1] if seq_raw else ""
+                for n in nums:
+                    if seq_text and n.startswith(seq_text) and len(n) > len(seq_text):
+                        suffix = n[len(seq_text):]
+                        if len(suffix) > len(code):
+                            code = suffix
+                    elif not code and len(n) >= 2 and n != seq_text:
+                        code = n
             if not code:
                 # Releitura apenas da célula do código em alta resolução.
                 crop = image.crop((int(width*.026), max(0, int(y-12)),
