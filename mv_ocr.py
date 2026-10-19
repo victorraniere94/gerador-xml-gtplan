@@ -82,6 +82,17 @@ def extract_mv(data):
                             code = suffix
                     elif not code and len(n) >= 2 and n != seq_text:
                         code = n
+            if not code or len(code) <= 2:
+                code_crop = image.crop((int(width*.023), max(0, int(y-18)),
+                                        int(width*.071), min(image.height, int(y+25))))
+                code_read = pytesseract.image_to_string(
+                    code_crop, lang="por", config="--psm 6"
+                )
+                candidates_code = re.findall(r"\d{2,7}", code_read)
+                if candidates_code:
+                    longest = max(candidates_code, key=len)
+                    if len(longest) > len(code):
+                        code = longest
             if not code:
                 # Releitura apenas da célula do código em alta resolução.
                 crop = image.crop((int(width*.026), max(0, int(y-12)),
