@@ -11,7 +11,6 @@ st.title("Gerador de XML — GTPlan")
 st.caption("Layout WA • Arquivos processados nesta sessão • Não envie dados confidenciais até validação interna.")
 st.info("Use apenas planilhas autorizadas. Este aplicativo pode ser acessado por qualquer pessoa com o endereço público.")
 
-numero = st.text_input("Número da requisição", placeholder="Ex.: 10")
 complemento = st.text_input("Complemento opcional do código dos produtos", placeholder="Ex.: POLICLINICA", help="Será acrescentado ao final de cada Codigo_Produto no XML.")
 hora = st.text_input("Hora de vencimento", value="15:41")
 titulo = st.text_input("Título da PDC (opcional)")
@@ -95,8 +94,6 @@ if arquivo is not None:
         for col in cleaned.columns:
             cleaned[col] = cleaned[col].astype(str).str.strip()
         errors = []
-        if not numero.strip():
-            errors.append("Informe o número da requisição.")
         if not re.fullmatch(r"\d{2}:\d{2}", hora.strip()):
             errors.append("A hora deve estar no formato HH:MM.")
         else:
@@ -116,8 +113,6 @@ if arquivo is not None:
                     raise ValueError()
             except Exception:
                 errors.append(f"Linha {i + 2}: quantidade inválida.")
-        requisicao = numero.strip()
-        st.write(f"**Requisição no XML:** {requisicao or '(não informada)'}")
         st.write(f"**Exemplo de código no XML:** {cleaned.iloc[0]['Código'] + (' ' + complemento.strip() if complemento.strip() else '') if len(cleaned) else '(sem itens)'}")
         st.write(f"**Itens:** {len(cleaned)}")
         if errors:
@@ -129,14 +124,14 @@ if arquivo is not None:
             if complemento.strip():
                 xml_items["Código"] = xml_items["Código"] + " " + complemento.strip()
             try:
-                xml_data = generate_xml(requisicao, xml_items, hora.strip(), titulo.strip(),
+                xml_data = generate_xml("", xml_items, hora.strip(), titulo.strip(),
                                         observacao.strip(), campo_extra_nome.strip(), campo_extra_valor.strip())
             except UnicodeEncodeError:
                 st.error("Há caracteres que não podem ser gravados em ISO-8859-1. Revise os textos.")
                 st.stop()
             st.success("XML gerado. Confira o arquivo em ambiente de teste do GTPlan antes do uso definitivo.")
             st.download_button("Baixar XML", data=xml_data,
-                               file_name="requisicao_" + re.sub(r"[^A-Za-z0-9_-]+", "_", requisicao)[:70] + ".xml",
+                               file_name="pedido_gtplan.xml",
                                mime="application/xml")
     except Exception as exc:
         st.error(f"Não foi possível processar a planilha: {exc}")
