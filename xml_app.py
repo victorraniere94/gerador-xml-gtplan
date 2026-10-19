@@ -23,8 +23,8 @@ with col_erp:
 
 if tipo_entrada == "PDF (OCR)":
     arquivo = st.file_uploader("Enviar PDF da requisição (até 10 MB)", type=["pdf"], key="pdf_upload")
-    if erp not in ("MV", "SPData"):
-        st.warning(f"A leitura automática do ERP {erp} ainda não foi configurada. Por enquanto, utilize MV, SPData ou Excel/CSV.")
+    if erp not in ("MV", "SPData", "Syshosp"):
+        st.warning(f"A leitura automática do ERP {erp} ainda não foi configurada. Por enquanto, utilize MV, SPData, Syshosp ou Excel/CSV.")
 else:
     arquivo = st.file_uploader("Importe Excel (.xlsx) ou CSV com código, descrição e quantidade (máximo 10 MB)", type=["xlsx", "csv"])
     st.caption("A quantidade deve ser a quantidade final solicitada, sem multiplicação por embalagem. Códigos e descrições são mantidos como texto.")
@@ -45,6 +45,9 @@ def load_table(upload):
         if erp == "SPData":
             from spdata_reader import extract_spdata
             return extract_spdata(raw)
+        if erp == "Syshosp":
+            from syshosp_reader import extract_syshosp
+            return extract_syshosp(raw)
         from mv_ocr import extract_mv
         return extract_mv(raw)
     if upload.name.lower().endswith(".xlsx"):
@@ -110,7 +113,7 @@ if arquivo is not None:
             st.stop()
         df = load_table(arquivo)
         if tipo_entrada == "PDF (OCR)":
-            st.warning("Confira todos os códigos, descrições e quantidades com o PDF original. No MV, use apenas Dados da Solicitação; no SPData, ignore Seq. e UND.")
+            st.warning("Confira todos os códigos, descrições e quantidades com o PDF original. No MV, use apenas Dados da Solicitação; no SPData e Syshosp, ignore Seq. e UND.")
             if df.empty:
                 st.error("O OCR não conseguiu identificar linhas com segurança. Confira o PDF abaixo e preencha os itens manualmente na tabela de revisão. Não serão inventados códigos ou quantidades.")
             with st.expander("Visualizar página do PDF original para conferir", expanded=df.empty):
