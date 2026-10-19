@@ -141,7 +141,7 @@ def clean_xml_text(value):
     """Preserva a descrição literal; XML/ISO-8859-1 não exige retirar acentos."""
     text = str(value)
     # XML 1.0 não permite controles C0 (exceto tab, CR e LF).
-    text = "".join(ch for ch in text if ch in "\\t\\n\\r" or ord(ch) >= 32)
+    text = "".join(ch for ch in text if ord(ch) in (9, 10, 13) or ord(ch) >= 32)
     # Impede substituição silenciosa de caracteres incompatíveis com o layout.
     text.encode("iso-8859-1", errors="strict")
     return text
