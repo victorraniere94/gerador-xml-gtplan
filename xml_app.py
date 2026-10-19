@@ -22,6 +22,27 @@ div[data-testid="stAlert"] {border-radius:12px;}
 div.stDownloadButton button[kind="primary"] {background-color:#2563eb !important;color:white !important;}
 </style>""",unsafe_allow_html=True)
 st.markdown("""<style>.block-container{max-width:1200px;padding-top:2rem}h1{letter-spacing:-.03em}div[data-testid="stFileUploader"]{border:1px solid #cbd5e1;border-radius:12px;padding:12px}div.stDownloadButton button{border-radius:10px;font-weight:700}</style>""",unsafe_allow_html=True)
+st.markdown("""<style>
+/* Contraste consistente inclusive em controles do Streamlit */
+[data-testid="stApp"] {color:#f1f5f9 !important;}
+[data-testid="stApp"] label,
+[data-testid="stApp"] label *,
+[data-testid="stApp"] [data-testid="stWidgetLabel"],
+[data-testid="stApp"] [data-testid="stWidgetLabel"] *,
+[data-testid="stApp"] [role="radiogroup"] *,
+[data-testid="stApp"] [data-testid="stFileUploader"] *,
+[data-testid="stApp"] [data-testid="stExpander"] *,
+[data-testid="stApp"] [data-testid="stMarkdownContainer"] {
+  color:#f1f5f9 !important;
+}
+[data-testid="stApp"] [data-testid="stCaptionContainer"],
+[data-testid="stApp"] [data-testid="stCaptionContainer"] * {color:#cbd5e1 !important;}
+[data-testid="stFileUploaderDropzone"] {background:#18263b !important;border:1px dashed #64748b !important;}
+[data-testid="stFileUploaderDropzone"] button {color:#f8fafc !important;background:#334155 !important;border-color:#64748b !important;}
+[data-testid="stApp"] input, [data-testid="stApp"] textarea {color:#fff !important;}
+[data-testid="stApp"] input::placeholder {color:#aebdd0 !important;opacity:1;}
+[data-testid="stApp"] [data-testid="stAlert"] * {color:inherit;}
+</style>""",unsafe_allow_html=True)
 st.title("Gerador de XML")
 st.caption("GTPlan  •  Layout WA  •  Conversão de Excel, CSV e PDF")
 st.info("Use somente arquivos autorizados. Este aplicativo é público. Confira os dados antes de importar no GTPlan.")
@@ -132,16 +153,17 @@ if arquivo is not None:
     try:
         if tipo_entrada == "PDF (OCR)" and erp not in ("MV", "SPData", "Syshosp"):
             st.stop()
-        df = load_table(arquivo)
+        with st.spinner("Lendo arquivo e identificando produtos... PDFs grandes podem demorar alguns minutos."):
+            df = load_table(arquivo)
         if tipo_entrada == "PDF (OCR)":
-            st.warning("Confira todos os códigos, descrições e quantidades com o PDF original. No MV, use apenas Dados da Solicitação; no SPData e Syshosp, ignore Seq. e UND.")
+            st.warning("Em PDFs grandes, o reconhecimento pode demorar alguns minutos. Confira todos os códigos, descrições e quantidades com o PDF original. No MV, use apenas Dados da Solicitação; no SPData e Syshosp, ignore Seq. e UND.")
             if df.empty:
                 st.error("O OCR não conseguiu identificar linhas com segurança. Confira o PDF abaixo e preencha os itens manualmente na tabela de revisão. Não serão inventados códigos ou quantidades.")
-            with st.expander("Visualizar página do PDF original para conferir", expanded=df.empty):
+            with st.expander("Visualizar páginas do PDF original para conferir", expanded=df.empty):
                 import fitz
                 from PIL import Image
                 pdf_doc = fitz.open(stream=arquivo.getvalue(), filetype="pdf")
-                for page_idx in range(min(pdf_doc.page_count, 15)):
+                for page_idx in range(min(pdf_doc.page_count, 100)):
                     page = pdf_doc[page_idx]
                     pix = page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5), alpha=False)
                     preview = Image.open(io.BytesIO(pix.tobytes("png")))
