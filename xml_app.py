@@ -171,6 +171,19 @@ if arquivo is not None:
                         preview = preview.rotate(270, expand=True)
                     st.image(preview, caption=f"Página {page_idx + 1} — confira a orientação e os valores", use_container_width=True)
             st.caption("Se alguma linha não for reconhecida, acrescente-a manualmente na tabela abaixo.")
+            if erp == "MV":
+                sequencias = df.attrs.get("mv_sequences", [])
+                if sequencias:
+                    from collections import Counter
+                    por_pagina = Counter(pagina for pagina, seq in sequencias)
+                    with st.expander("Diagnóstico MV — sequências reconhecidas por página"):
+                        st.caption("Esta contagem mostra as linhas identificadas pelo OCR, não garante que a descrição e a quantidade estejam corretas.")
+                        st.dataframe(pd.DataFrame([{"Página": p, "Sequências identificadas": por_pagina.get(p, 0)} for p in range(1, max(por_pagina) + 1)]), hide_index=True, use_container_width=True)
+                        nums = {seq for _, seq in sequencias}
+                        if nums and max(nums) <= 500:
+                            ausentes = sorted(set(range(1, max(nums) + 1)) - nums)
+                            if ausentes:
+                                st.warning("Sequências não identificadas pelo OCR: " + ", ".join(map(str, ausentes)))
         a, b, c = st.columns(3)
         names = list(df.columns)
         with a:
@@ -191,19 +204,6 @@ if arquivo is not None:
         reviewed = st.data_editor(items, hide_index=True, num_rows="dynamic", use_container_width=True, key="xml_editor")
         if tipo_entrada == "PDF (OCR)" and not df.empty:
             st.warning(f"O OCR encontrou {len(df)} item(ns). Confira no PDF se há mais itens e se todas as quantidades estão corretas.")
-            if erp == "MV":
-                sequencias = df.attrs.get("mv_sequences", [])
-                if sequencias:
-                    from collections import Counter
-                    por_pagina = Counter(pagina for pagina, seq in sequencias)
-                    with st.expander("Diagnóstico MV — sequências reconhecidas por página"):
-                        st.caption("Esta contagem mostra as linhas identificadas pelo OCR, não garante que a descrição e a quantidade estejam corretas.")
-                        st.dataframe(pd.DataFrame([{"Página": p, "Sequências identificadas": por_pagina.get(p, 0)} for p in range(1, max(por_pagina) + 1)]), hide_index=True, use_container_width=True)
-                        nums = {seq for _, seq in sequencias}
-                        if nums and max(nums) <= 500:
-                            ausentes = sorted(set(range(1, max(nums) + 1)) - nums)
-                            if ausentes:
-                                st.warning("Sequências não identificadas pelo OCR: " + ", ".join(map(str, ausentes)))
         cleaned = reviewed.copy()
         for col in cleaned.columns:
             cleaned[col] = cleaned[col].astype(str).str.strip()
