@@ -40,7 +40,7 @@ def _recognize(page):
 def _parse_layout(lines, width):
     """Lê códigos e quantidades pela posição das colunas, nunca pela última compra."""
     # Os recortes são proporcionais à largura da página já colocada na horizontal.
-    # Seq e código: 0-7%; produto: 7-25%; quantidade solicitada: 36-43%.
+    # Seq e código: 0-7%; produto: 7-25%; quantidade solicitada: 33-39%.
     tokens = [(y, x, t) for y, x, t in lines]
     candidates = []
     for y, x, txt in tokens:
@@ -64,14 +64,14 @@ def _parse_layout(lines, width):
         next_y = candidates[idx + 1][0] if idx + 1 < len(candidates) else float("inf")
         row_tokens = [(yy, xx, tt) for yy, xx, tt in tokens if abs(yy - y) <= 15]
         qty_tokens = [(xx, tt) for _, xx, tt in row_tokens
-                      if width * 0.365 <= xx <= width * 0.43]
+                      if width * 0.325 <= xx <= width * 0.39]
         qty_tokens.sort()
         qty = next((m.group() for _, t in qty_tokens
                     if (m := re.search(r"\\d+(?:[.,]\\d{1,3})?", t))), None)
         description_parts = [
             (yy, xx, tt) for yy, xx, tt in tokens
             if y - 8 <= yy < min(y + 55, next_y - 10)
-            and width * 0.07 <= xx < width * 0.25
+            and width * 0.06 <= xx < width * 0.25
             and not re.search(r"Rateio|C[oó]d\\.|Siaf|Siagem|Siafem", tt, re.I)
         ]
         description_parts.sort(key=lambda z: (round(z[0] / 12), z[1]))
