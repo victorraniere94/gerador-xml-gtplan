@@ -95,15 +95,10 @@ else:
     st.caption("A quantidade deve ser a quantidade final solicitada, sem multiplicação por embalagem. Códigos e descrições são mantidos como texto.")
 
 with st.expander("Configurações opcionais do XML", expanded=False):
-    col_comp, col_hora = st.columns([2, 1])
-    with col_comp:
-        complemento = st.text_input("Complemento do código dos produtos", placeholder="Ex.: POLICLINICA", help="Será acrescentado ao final de cada Codigo_Produto no XML.")
-    with col_hora:
-        hora = st.text_input("Hora de vencimento", value="15:41")
+    complemento = st.text_input("Complemento do código dos produtos", placeholder="Ex.: POLICLINICA", help="Será acrescentado ao final de cada Codigo_Produto no XML.")
 # Campos fixos do layout WA, sem necessidade de preenchimento na interface.
 titulo = ""
 observacao = ""
-requisicao = st.text_input("Número da requisição", value="", help="Informe o número da requisição que consta no PDF.")
 campo_extra_nome = "Não Programada"
 campo_extra_valor = ""
 
@@ -247,14 +242,6 @@ if arquivo is not None:
         cleaned["Código"] = cleaned["Código"].str.strip()
         cleaned["Quantidade"] = cleaned["Quantidade"].str.strip()
         errors = []
-        if tipo_entrada == "PDF (OCR)" and not requisicao.strip():
-            errors.append("Informe o número da requisição antes de gerar o XML.")
-        if not re.fullmatch(r"\d{2}:\d{2}", hora.strip()):
-            errors.append("A hora deve estar no formato HH:MM.")
-        else:
-            hh, mm = map(int, hora.split(":"))
-            if hh > 23 or mm > 59:
-                errors.append("Hora inválida.")
         if not len(cleaned):
             errors.append("Inclua pelo menos um item.")
         for i, row in cleaned.iterrows():
@@ -284,7 +271,7 @@ if arquivo is not None:
                 xml_items["Código"] = xml_items["Código"] + " " + complemento.strip()
             xml_items["Quantidade"] = xml_items["Quantidade"].map(parse_quantity)
             try:
-                xml_data = generate_xml(requisicao.strip(), xml_items, hora.strip(), titulo.strip(),
+                xml_data = generate_xml("", xml_items, "", titulo.strip(),
                                         observacao.strip(), campo_extra_nome.strip(), campo_extra_valor.strip())
             except UnicodeEncodeError:
                 st.error("Há caracteres que não podem ser gravados em ISO-8859-1. Revise os textos.")
