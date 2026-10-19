@@ -9,7 +9,7 @@ from PIL import Image
 import pytesseract
 
 ROW = re.compile(
-    r"^\s*(\d{1,4})\s+(\d{1,12})\s+(.+?)\s+"
+    r"^\s*(\d{1,4})\s+(\d{1,12})\s+(.+)\s+"
     r"(UNID|UND|UNIDADE|CX|CAIXA|PCT|PACOTE|FR|FRASCO|FRS|KG|L|ML|PAR|KIT|PC|PECA|PEÇA|BOBI|BOBINA|ROLO)\s+"
     r"(\d+(?:[.,]\d+)?)\s*(?:$|\s)",
     re.IGNORECASE,
