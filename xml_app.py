@@ -1,4 +1,5 @@
 import io
+import hashlib
 import time
 import re
 import unicodedata
@@ -9,15 +10,19 @@ import streamlit as st
 
 st.set_page_config(page_title="Gerador de XML", page_icon="📄", layout="wide")
 
-if "xml_downloads_sessao" not in st.session_state:
-    st.session_state["xml_downloads_sessao"] = 0
-if "xml_itens_exportados_sessao" not in st.session_state:
-    st.session_state["xml_itens_exportados_sessao"] = 0
+if "historico_pedidos" not in st.session_state:
+    st.session_state["historico_pedidos"] = {}
 
-def registrar_download_xml(quantidade_itens):
-    """Contabiliza cliques em baixar XML nesta sessão, não downloads confirmados pelo navegador."""
-    st.session_state["xml_downloads_sessao"] += 1
-    st.session_state["xml_itens_exportados_sessao"] += quantidade_itens
+def registrar_download_xml(identificador, nome, quantidade_itens):
+    """Registra clique de exportação, separado por arquivo de origem nesta sessão."""
+    historico = st.session_state["historico_pedidos"]
+    if identificador not in historico:
+        historico[identificador] = {
+            "Pedido": nome, "Produtos": quantidade_itens,
+            "Exportações": 0, "Tempo (s)": None
+        }
+    historico[identificador]["Produtos"] = quantidade_itens
+    historico[identificador]["Exportações"] += 1
 
 st.markdown("""<style>
 :root { color-scheme: dark; }
@@ -135,17 +140,22 @@ with painel_upload:
             except Exception:
                 pass
 with painel_resumo:
-    st.markdown("#### 📊 Indicadores")
-    if arquivo is None:
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Produtos extraídos", "—")
-        m2.metric("Dados preenchidos", "—")
-        m3.metric("Tempo de leitura", "—")
-        m4.metric("XMLs solicitados", st.session_state["xml_downloads_sessao"])
-        st.info("Envie um documento para visualizar os indicadores e conferir os produtos.")
+    st.markdown("#### 📊 Resumo da sessão")
+    historico = st.session_state["historico_pedidos"]
+    pedidos_exportados = [p for p in historico.values() if p["Exportações"] > 0]
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Pedidos diferentes", len(pedidos_exportados))
+    m2.metric("XMLs solicitados", sum(p["Exportações"] for p in pedidos_exportados))
+    m3.metric("Produtos nos pedidos", sum(p["Produtos"] for p in pedidos_exportados))
+    tempos = [p["Tempo (s)"] for p in pedidos_exportados if p["Tempo (s)"] is not None]
+    m4.metric("Tempo médio de leitura", f"{sum(tempos)/len(tempos):.1f} s" if tempos else "—")
+    if pedidos_exportados:
+        st.markdown("##### Pedidos exportados nesta sessão")
+        st.dataframe(pd.DataFrame(pedidos_exportados)[["Pedido", "Produtos", "Exportações", "Tempo (s)"]],
+                     hide_index=True, use_container_width=True, height=min(280, 45 + 36 * len(pedidos_exportados)))
     else:
-        st.metric("XMLs solicitados nesta sessão", st.session_state["xml_downloads_sessao"])
-        st.caption("Os indicadores da requisição aparecerão abaixo após a leitura do documento.")
+        st.caption("Os pedidos aparecerão aqui individualmente após clicar em Baixar XML.")
+    st.caption("Dados apenas desta sessão. Exportações contabilizam cliques, não downloads concluídos.")
 
 # Campos fixos do layout WA, sem necessidade de preenchimento na interface.
 titulo = ""
@@ -233,6 +243,13 @@ if arquivo is not None:
             inicio_leitura = time.perf_counter()
             df = load_table(arquivo)
             duracao_leitura = time.perf_counter() - inicio_leitura
+            identificador_pedido = hashlib.sha256(arquivo.getvalue()).hexdigest()
+            historico = st.session_state["historico_pedidos"]
+            if identificador_pedido not in historico:
+                historico[identificador_pedido] = {
+                    "Pedido": arquivo.name, "Produtos": len(df),
+                    "Exportações": 0, "Tempo (s)": round(duracao_leitura, 1)
+                }
         if tipo_entrada == "PDF (OCR)":
             st.warning("Em PDFs grandes, o reconhecimento pode demorar alguns minutos. Confira todos os códigos, descrições e quantidades com o PDF original. No MV, use apenas Dados da Solicitação; no SPData e Syshosp, ignore Seq. e UND.")
             if df.empty:
@@ -345,7 +362,7 @@ if arquivo is not None:
             st.download_button("Baixar XML", data=xml_data,
                                file_name="pedido.xml",
                                mime="application/xml", use_container_width=True, type="primary",
-                               on_click=registrar_download_xml, args=(len(xml_items),))
+                               on_click=registrar_download_xml, args=(identificador_pedido, arquivo.name, len(xml_items)))
     except Exception as exc:
         st.error(f"Não foi possível processar a planilha: {exc}")
 else:
