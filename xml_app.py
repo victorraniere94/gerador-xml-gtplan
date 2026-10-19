@@ -317,7 +317,7 @@ if arquivo is not None:
         preenchidos = ((items["Código"].astype(str).str.strip() != "") & (items["Descrição"].astype(str).str.strip() != "") & (items["Quantidade"].astype(str).str.strip() != "")).sum()
         m2.metric("Linhas preenchidas", int(preenchidos))
         m3.metric("Tempo de leitura", f"{duracao_leitura:.1f} s")
-        m4.metric("XMLs solicitados", st.session_state["xml_downloads_sessao"])
+        m4.metric("XMLs solicitados deste pedido", st.session_state["historico_pedidos"].get(identificador_pedido, {}).get("Exportações", 0))
         st.caption("XMLs solicitados contabiliza cliques em Baixar XML nesta sessão, não confirma a conclusão do download. A contagem zera em uma nova sessão.")
         st.caption("Linhas preenchidas não significam itens conferidos. A revisão com o documento original é obrigatória.")
         st.caption(f"Arquivo: {arquivo.name} • {len(items)} itens identificados")
