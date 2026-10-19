@@ -31,30 +31,61 @@ def extract_mv(data):
             (data_ocr["left"][i] / width, data_ocr["top"][i], word.strip())
             for i, word in enumerate(data_ocr["text"]) if word.strip()
         ]
-        # Exige sequência à esquerda do código para evitar cabeçalhos e rateios.
-        codes = []
+        # Uma linha de produto é identificada pela quantidade solicitada,
+        # não pelo valor numérico da coluna Seq. (que pode se repetir).
+        # A linha de rateio também tem quantidade, mas não tem descrição/código.
+        candidates = []
         for x, y, word in tokens:
-            if not (.026 < x < .055 and re.fullmatch(r"\d{1,7}", word)):
+            if not (.365 < x < .43 and NUMERO.fullmatch(word)):
                 continue
-            if any(
-                xx < .026 and abs(yy-y) < 15 and re.fullmatch(r"\d{1,3}", w)
-                for xx, yy, w in tokens
-            ):
-                codes.append((y, word))
-                seq_candidates = [(abs(yy-y), int(w)) for xx, yy, w in tokens if xx < .026 and abs(yy-y) < 15 and re.fullmatch(r"\d{1,3}", w)]
-                if seq_candidates:
-                    detected_sequences.append((page_number, min(seq_candidates)[1]))
-        codes.sort()
+            if not any(.07 < xx < .265 and abs(yy-y) < 13
+                       and re.search(r"[A-Za-zÀ-ÿ]", w)
+                       for xx, yy, w in tokens):
+                continue
+            if any(abs(y-yy) < 12 for yy in candidates):
+                continue
+            candidates.append(y)
+        candidates.sort()
+        codes = []
+        for y in candidates:
+            code_tokens = [(abs(yy-y), w) for xx, yy, w in tokens
+                           if .026 < xx < .07 and abs(yy-y) < 15
+                           and re.fullmatch(r"\\d{1,7}", w)]
+            code_tokens.sort()
+            code = code_tokens[0][1] if code_tokens else ""
+            # Código pode estar colado ao Seq. (ex.: 7/9721).
+            if not code:
+                fused = [(abs(yy-y), m.group(1))
+                         for xx, yy, w in tokens if xx < .07 and abs(yy-y) < 15
+                         for m in [re.search(r"[/|]([0-9]{2,7})$", w)]
+                         if m]
+                if fused:
+                    code = min(fused)[1]
+            if not code:
+                # Releitura apenas da célula do código em alta resolução.
+                crop = image.crop((int(width*.026), max(0, int(y-12)),
+                                   int(width*.071), min(image.height, int(y+30))))
+                reread = pytesseract.image_to_string(
+                    crop.resize((crop.width*3, crop.height*3)),
+                    lang="por", config="--psm 7 -c tessedit_char_whitelist=0123456789"
+                )
+                found = re.search(r"\\d{2,7}", reread)
+                if found:
+                    code = found.group()
+            if not code:
+                continue
+            seq_candidates = [(abs(yy-y), int(w)) for xx, yy, w in tokens
+                              if xx < .026 and abs(yy-y) < 15
+                              and re.fullmatch(r"\\d{1,3}", w)]
+            if seq_candidates:
+                detected_sequences.append((page_number, min(seq_candidates)[1]))
+            codes.append((y, code))
         for idx, (y, code) in enumerate(codes):
             next_y = codes[idx+1][0] if idx+1 < len(codes) else float("inf")
-            quantities = [
-                (abs(yy-y), word)
-                for x, yy, word in tokens
-                if .365 < x < .43 and abs(yy-y) < 16
-                and NUMERO.fullmatch(word)
-            ]
+            quantities = [(abs(yy-y), word) for x, yy, word in tokens
+                          if .365 < x < .43 and abs(yy-y) < 16
+                          and NUMERO.fullmatch(word)]
             quantities.sort()
-            # Não usar números de outras colunas como alternativa.
             if not quantities:
                 continue
             # Agrupar palavras da descrição respeitando a posição horizontal.
