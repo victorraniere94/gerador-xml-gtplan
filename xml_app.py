@@ -103,6 +103,7 @@ with st.expander("Configurações opcionais do XML", expanded=False):
 # Campos fixos do layout WA, sem necessidade de preenchimento na interface.
 titulo = ""
 observacao = ""
+requisicao = st.text_input("Número da requisição", value="", help="Informe o número da requisição que consta no PDF.")
 campo_extra_nome = "Não Programada"
 campo_extra_valor = ""
 
@@ -246,6 +247,8 @@ if arquivo is not None:
         cleaned["Código"] = cleaned["Código"].str.strip()
         cleaned["Quantidade"] = cleaned["Quantidade"].str.strip()
         errors = []
+        if tipo_entrada == "PDF (OCR)" and not requisicao.strip():
+            errors.append("Informe o número da requisição antes de gerar o XML.")
         if not re.fullmatch(r"\d{2}:\d{2}", hora.strip()):
             errors.append("A hora deve estar no formato HH:MM.")
         else:
@@ -281,7 +284,7 @@ if arquivo is not None:
                 xml_items["Código"] = xml_items["Código"] + " " + complemento.strip()
             xml_items["Quantidade"] = xml_items["Quantidade"].map(parse_quantity)
             try:
-                xml_data = generate_xml("", xml_items, hora.strip(), titulo.strip(),
+                xml_data = generate_xml(requisicao.strip(), xml_items, hora.strip(), titulo.strip(),
                                         observacao.strip(), campo_extra_nome.strip(), campo_extra_valor.strip())
             except UnicodeEncodeError:
                 st.error("Há caracteres que não podem ser gravados em ISO-8859-1. Revise os textos.")
