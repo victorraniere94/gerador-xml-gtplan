@@ -61,10 +61,4 @@ def extract_mv(data):
             if match:
                 code, desc, unit, qty = match.groups()
                 rows.append({"Código": code, "Descrição": desc.strip(), "Quantidade": qty})
-    if not rows:
-        raise ValueError(
-            "Não foi possível reconhecer com segurança os itens na tabela MV. "
-            "O PDF pode ter qualidade ou diagramação diferente; não geramos quantidades por estimativa. "
-            "Envie uma planilha Excel/CSV ou solicite ajuste do leitor para este documento."
-        )
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=["Código", "Descrição", "Quantidade"])
