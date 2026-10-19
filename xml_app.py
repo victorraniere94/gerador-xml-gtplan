@@ -43,6 +43,33 @@ st.markdown("""<style>
 [data-testid="stApp"] input::placeholder {color:#aebdd0 !important;opacity:1;}
 [data-testid="stApp"] [data-testid="stAlert"] * {color:inherit;}
 </style>""",unsafe_allow_html=True)
+st.markdown("""<style>
+/* Botões de ação com contraste alto no tema escuro */
+div[data-testid="stDownloadButton"] button {
+  background:#80c8fa !important;
+  border:1px solid #5aaeea !important;
+  border-radius:10px !important;
+  color:#080f1e !important;
+  font-weight:700 !important;
+}
+div[data-testid="stDownloadButton"] button *,
+div[data-testid="stDownloadButton"] button p,
+div[data-testid="stDownloadButton"] button span {
+  color:#080f1e !important;
+}
+div[data-testid="stDownloadButton"] button:disabled {
+  background:#344155 !important;
+  border-color:#526077 !important;
+  color:#cbd5e1 !important;
+}
+div[data-testid="stDownloadButton"] button:disabled * {color:#cbd5e1 !important;}
+div[data-testid="stDownloadButton"] button[kind="primary"] {
+  background:#24864b !important;
+  border-color:#24864b !important;
+  color:#fff !important;
+}
+div[data-testid="stDownloadButton"] button[kind="primary"] * {color:#fff !important;}
+</style>""", unsafe_allow_html=True)
 st.title("Gerador de XML")
 st.caption("GTPlan  •  Layout WA  •  Conversão de Excel, CSV e PDF")
 st.info("Use somente arquivos autorizados. Este aplicativo é público. Confira os dados antes de importar no GTPlan.")
