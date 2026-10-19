@@ -7,11 +7,13 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(page_title="Gerador XML GTPlan", page_icon="📄", layout="wide")
-st.title("Gerador de XML — GTPlan")
-st.caption("Layout WA • Arquivos processados nesta sessão • Não envie dados confidenciais até validação interna.")
-st.info("Use apenas planilhas autorizadas. Este aplicativo pode ser acessado por qualquer pessoa com o endereço público.")
+st.markdown("""<style>.block-container{max-width:1200px;padding-top:2rem}h1{letter-spacing:-.03em}div[data-testid="stFileUploader"]{border:1px solid #cbd5e1;border-radius:12px;padding:12px}div.stDownloadButton button{border-radius:10px;font-weight:700}</style>""",unsafe_allow_html=True)
+st.title("Gerador de XML")
+st.caption("GTPlan  •  Layout WA  •  Conversão de Excel, CSV e PDF")
+st.info("Use somente arquivos autorizados. Este aplicativo é público. Confira os dados antes de importar no GTPlan.")
+st.markdown("### 1. Origem do documento")
 
-col_formato, col_erp = st.columns(2)
+col_formato, col_erp = st.columns(2, gap="large")
 with col_formato:
     tipo_entrada = st.radio("Formato do arquivo de origem", ["Excel / CSV", "PDF (OCR)"], horizontal=True)
 with col_erp:
@@ -21,6 +23,7 @@ with col_erp:
         erp = None
         st.caption("ERP de origem: não se aplica a Excel / CSV")
 
+st.markdown("### 2. Enviar arquivo")
 if tipo_entrada == "PDF (OCR)":
     arquivo = st.file_uploader("Enviar PDF da requisição (até 10 MB)", type=["pdf"], key="pdf_upload")
     if erp not in ("MV", "SPData", "Syshosp"):
@@ -29,8 +32,12 @@ else:
     arquivo = st.file_uploader("Importe Excel (.xlsx) ou CSV com código, descrição e quantidade (máximo 10 MB)", type=["xlsx", "csv"])
     st.caption("A quantidade deve ser a quantidade final solicitada, sem multiplicação por embalagem. Códigos e descrições são mantidos como texto.")
 
-complemento = st.text_input("Complemento opcional do código dos produtos", placeholder="Ex.: POLICLINICA", help="Será acrescentado ao final de cada Codigo_Produto no XML.")
-hora = st.text_input("Hora de vencimento", value="15:41")
+with st.expander("Configurações opcionais do XML", expanded=False):
+    col_comp, col_hora = st.columns([2, 1])
+    with col_comp:
+        complemento = st.text_input("Complemento do código dos produtos", placeholder="Ex.: POLICLINICA", help="Será acrescentado ao final de cada Codigo_Produto no XML.")
+    with col_hora:
+        hora = st.text_input("Hora de vencimento", value="15:41")
 # Campos fixos do layout WA, sem necessidade de preenchimento na interface.
 titulo = ""
 observacao = ""
@@ -142,7 +149,8 @@ if arquivo is not None:
         items = df[[codigo, descricao, quantidade]].copy()
         items.columns = ["Código", "Descrição", "Quantidade"]
         items = items.fillna("")
-        st.subheader("Revisar itens")
+        st.markdown("### 3. Conferir produtos")
+        st.caption(f"Arquivo: {arquivo.name} • {len(items)} itens identificados")
         st.caption("Você pode editar diretamente na tabela antes de gerar o XML. Acentos, cedilha e símbolos não permitidos serão removidos automaticamente apenas do XML.")
         reviewed = st.data_editor(items, hide_index=True, num_rows="dynamic", use_container_width=True, key="xml_editor")
         if tipo_entrada == "PDF (OCR)" and not df.empty:
@@ -175,10 +183,11 @@ if arquivo is not None:
             confirmado = st.checkbox("Conferi todos os códigos, descrições e quantidades com o PDF original.", value=False)
             if not confirmado:
                 errors.append("Confirme a conferência dos itens antes de baixar o XML.")
+        st.markdown("### 4. Gerar XML")
         if errors:
             for error in errors[:20]:
                 st.error(error)
-            st.download_button("Baixar XML", data=b"", disabled=True)
+            st.download_button("Baixar XML", data=b"", disabled=True, use_container_width=True)
         else:
             xml_items = cleaned[["Código", "Descrição", "Quantidade"]].copy()
             if complemento.strip():
@@ -193,7 +202,7 @@ if arquivo is not None:
             st.success("XML gerado. Confira o arquivo em ambiente de teste do GTPlan antes do uso definitivo.")
             st.download_button("Baixar XML", data=xml_data,
                                file_name="pedido_gtplan.xml",
-                               mime="application/xml")
+                               mime="application/xml", use_container_width=True, type="primary")
     except Exception as exc:
         st.error(f"Não foi possível processar a planilha: {exc}")
 else:
