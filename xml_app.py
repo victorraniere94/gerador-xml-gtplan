@@ -6,7 +6,7 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Gerador XML GTPlan", page_icon="📄", layout="wide")
+st.set_page_config(page_title="Gerador de XML", page_icon="📄", layout="wide")
 st.markdown("""<style>
 :root { color-scheme: dark; }
 [data-testid="stApp"], [data-testid="stAppViewContainer"], [data-testid="stMain"] {
@@ -86,7 +86,7 @@ div[data-testid="stDownloadButton"] button:disabled * { color: #cbd5e1 !importan
 }
 </style>""", unsafe_allow_html=True)
 st.markdown("""<div class="gt-hero">
-<div class="gt-eyebrow">GTPLAN · LAYOUT WA</div>
+<div class="gt-eyebrow">CONVERSOR DE DOCUMENTOS · LAYOUT WA</div>
 <h1>Gerador de XML</h1>
 <p>Converta requisições em XML com conferência dos produtos antes da exportação.</p>
 </div>
@@ -95,7 +95,7 @@ st.markdown("""<div class="gt-hero">
 <div class="gt-step"><b>02</b> Conferir produtos</div>
 <div class="gt-step"><b>03</b> Gerar XML</div>
 </div>""", unsafe_allow_html=True)
-st.info("Use somente arquivos autorizados. Este aplicativo é público. Confira os dados antes de importar no GTPlan.")
+st.info("Use somente arquivos autorizados. Este aplicativo é público. Confira os dados antes de importar no sistema de destino.")
 st.markdown("### 1. Origem do documento")
 
 col_formato, col_erp = st.columns(2, gap="large")
@@ -299,9 +299,9 @@ if arquivo is not None:
             except UnicodeEncodeError:
                 st.error("Há caracteres que não podem ser gravados em ISO-8859-1. Revise os textos.")
                 st.stop()
-            st.success("XML gerado. Confira o arquivo em ambiente de teste do GTPlan antes do uso definitivo.")
+            st.success("XML gerado. Confira o arquivo em ambiente de teste antes do uso definitivo.")
             st.download_button("Baixar XML", data=xml_data,
-                               file_name="pedido_gtplan.xml",
+                               file_name="pedido.xml",
                                mime="application/xml", use_container_width=True, type="primary")
     except Exception as exc:
         st.error(f"Não foi possível processar a planilha: {exc}")
