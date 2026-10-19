@@ -69,6 +69,17 @@ def clean_xml_text(value):
     return text
 
 
+def parse_quantity(value):
+    from decimal import Decimal
+    raw = str(value).strip().replace(" ", "")
+    if "," in raw:
+        raw = raw.replace(".", "").replace(",", ".")
+    number = Decimal(raw)
+    if not number.is_finite() or number <= 0:
+        raise ValueError("Quantidade inválida")
+    return format(number, "f")
+
+
 def generate_xml(req, items, due_time, title, note, extra_name, extra_value):
     root = ET.Element("Pedido", {"layout": "WA"})
     header = ET.SubElement(root, "Cabecalho")
@@ -142,12 +153,8 @@ if arquivo is not None:
         for i, row in cleaned.iterrows():
             if not row["Código"] or not row["Descrição"]:
                 errors.append(f"Linha {i + 2}: código e descrição são obrigatórios.")
-            qty = row["Quantidade"].replace(",", ".")
             try:
-                from decimal import Decimal
-                value = Decimal(qty)
-                if not value.is_finite() or value <= 0:
-                    raise ValueError()
+                parse_quantity(row["Quantidade"])
             except Exception:
                 errors.append(f"Linha {i + 2}: quantidade inválida.")
         st.write(f"**Exemplo de código no XML:** {cleaned.iloc[0]['Código'] + (' ' + complemento.strip() if complemento.strip() else '') if len(cleaned) else '(sem itens)'}")
@@ -167,6 +174,7 @@ if arquivo is not None:
             xml_items = cleaned[["Código", "Descrição", "Quantidade"]].copy()
             if complemento.strip():
                 xml_items["Código"] = xml_items["Código"] + " " + complemento.strip()
+            xml_items["Quantidade"] = xml_items["Quantidade"].map(parse_quantity)
             try:
                 xml_data = generate_xml("", xml_items, hora.strip(), titulo.strip(),
                                         observacao.strip(), campo_extra_nome.strip(), campo_extra_valor.strip())
