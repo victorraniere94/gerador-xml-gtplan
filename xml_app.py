@@ -16,7 +16,7 @@ with col_formato:
     tipo_entrada = st.radio("Formato do arquivo de origem", ["Excel / CSV", "PDF (OCR)"], horizontal=True)
 with col_erp:
     if tipo_entrada == "PDF (OCR)":
-        erp = st.selectbox("ERP de origem", ["MV", "SPData", "Syshosp", "SMED"])
+        erp = st.radio("ERP de origem", ["MV", "SPData", "Syshosp", "SMED"], horizontal=True)
     else:
         erp = None
         st.caption("ERP de origem: não se aplica a Excel / CSV")
