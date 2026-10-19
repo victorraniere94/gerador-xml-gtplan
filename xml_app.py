@@ -315,13 +315,10 @@ if arquivo is not None:
                 parse_quantity(row["Quantidade"])
             except Exception:
                 errors.append(f"Linha {i + 2}: quantidade inválida.")
-        st.write(f"**Exemplo de código no XML:** {cleaned.iloc[0]['Código'] + (' ' + complemento.strip() if complemento.strip() else '') if len(cleaned) else '(sem itens)'}")
-        st.write(f"**Itens:** {len(cleaned)}")
+        exemplo_codigo = cleaned.iloc[0]["Código"] + (" " + complemento.strip() if complemento.strip() else "") if len(cleaned) else "(sem itens)"
+        st.caption(f"📦 Total de produtos na tabela: {len(cleaned)}  •  Exemplo de código no XML: {exemplo_codigo}")
         if tipo_entrada == "PDF (OCR)":
-            total_esperado = st.number_input("Quantos produtos constam no PDF original?", min_value=1, value=max(1, len(cleaned)), step=1, help="Conte os itens de todas as páginas, não as linhas da descrição.")
-            if len(cleaned) != total_esperado:
-                errors.append(f"O PDF tem {total_esperado} produtos, mas a tabela contém {len(cleaned)}. Corrija antes de gerar o XML.")
-            confirmado = st.checkbox("Conferi todos os códigos, descrições e quantidades com o PDF original.", value=False)
+            confirmado = st.checkbox("Conferi a quantidade total de produtos, os códigos, as descrições e as quantidades com o PDF original.", value=False)
             if not confirmado:
                 errors.append("Confirme a conferência dos itens antes de baixar o XML.")
         st.markdown("### 🟢 Gerar XML")
