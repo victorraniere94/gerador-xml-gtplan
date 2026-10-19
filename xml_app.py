@@ -11,8 +11,14 @@ st.title("Gerador de XML — GTPlan")
 st.caption("Layout WA • Arquivos processados nesta sessão • Não envie dados confidenciais até validação interna.")
 st.info("Use apenas planilhas autorizadas. Este aplicativo pode ser acessado por qualquer pessoa com o endereço público.")
 
-arquivo = st.file_uploader("Importe Excel (.xlsx) ou CSV com código, descrição e quantidade (máximo 10 MB)", type=["xlsx", "csv"])
-st.caption("A quantidade deve ser a quantidade final solicitada, sem multiplicação por embalagem. Códigos e descrições são mantidos como texto.")
+tipo_entrada = st.radio("Formato do arquivo de origem", ["Excel / CSV", "PDF (OCR)"], horizontal=True)
+if tipo_entrada == "PDF (OCR)":
+    erp = st.selectbox("Selecione o ERP de origem do PDF", ["MV", "SPData", "Syshosp", "SMED"])
+    st.info(f"ERP selecionado: {erp}. A leitura de PDFs digitalizados ainda está em preparação. Envie um modelo de requisição desse ERP para configurarmos o reconhecimento com segurança.")
+    arquivo = None
+else:
+    arquivo = st.file_uploader("Importe Excel (.xlsx) ou CSV com código, descrição e quantidade (máximo 10 MB)", type=["xlsx", "csv"])
+    st.caption("A quantidade deve ser a quantidade final solicitada, sem multiplicação por embalagem. Códigos e descrições são mantidos como texto.")
 
 complemento = st.text_input("Complemento opcional do código dos produtos", placeholder="Ex.: POLICLINICA", help="Será acrescentado ao final de cada Codigo_Produto no XML.")
 hora = st.text_input("Hora de vencimento", value="15:41")
@@ -137,4 +143,5 @@ if arquivo is not None:
     except Exception as exc:
         st.error(f"Não foi possível processar a planilha: {exc}")
 else:
-    st.info("Envie uma planilha para começar. Não é necessário instalar programas.")
+    if tipo_entrada == "Excel / CSV":
+        st.info("Envie uma planilha para começar. Não é necessário instalar programas.")
