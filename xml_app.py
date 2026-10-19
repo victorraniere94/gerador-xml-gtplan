@@ -1,5 +1,6 @@
 import io
 import re
+import unicodedata
 import xml.etree.ElementTree as ET
 from datetime import datetime
 import pandas as pd
@@ -42,6 +43,14 @@ def load_table(upload):
         raise ValueError("O arquivo deve conter pelo menos três colunas.")
     return df
 
+def clean_xml_text(value):
+    text = unicodedata.normalize('NFKD', str(value))
+    text = ''.join(char for char in text if not unicodedata.combining(char))
+    text = text.replace('ß', 'ss').replace('Æ', 'AE').replace('æ', 'ae').replace('ø', 'o').replace('Ø', 'O')
+    text = re.sub(r'[^A-Za-z0-9 /%.,+()_:\\-]', '', text)
+    return text
+
+
 def generate_xml(req, items, due_time, title, note, extra_name, extra_value):
     root = ET.Element("Pedido", {"layout": "WA"})
     header = ET.SubElement(root, "Cabecalho")
@@ -50,15 +59,15 @@ def generate_xml(req, items, due_time, title, note, extra_name, extra_value):
         ("Data_Vencimento", ""), ("Hora_Vencimento", due_time),
         ("Moeda", "Reais"), ("Observacao", note)
     ):
-        ET.SubElement(header, tag).text = value
+        ET.SubElement(header, tag).text = clean_xml_text(value)
     extra = ET.SubElement(header, "Campo_Extra")
-    ET.SubElement(extra, "Nome").text = extra_name
-    ET.SubElement(extra, "Valor").text = extra_value
+    ET.SubElement(extra, "Nome").text = clean_xml_text(extra_name)
+    ET.SubElement(extra, "Valor").text = clean_xml_text(extra_value)
     container = ET.SubElement(root, "Itens_Requisicao")
     for item in items.itertuples(index=False, name=None):
         node = ET.SubElement(container, "Item_Requisicao")
         for tag, value in zip(("Codigo_Produto", "Descricao_Produto", "Quantidade"), item):
-            ET.SubElement(node, tag).text = str(value)
+            ET.SubElement(node, tag).text = clean_xml_text(value)
     ET.indent(root, space="  ")
     return ET.tostring(root, encoding="iso-8859-1", xml_declaration=True, short_empty_elements=False)
 
@@ -80,7 +89,7 @@ if arquivo is not None:
         items.columns = ["Código", "Descrição", "Quantidade"]
         items = items.fillna("")
         st.subheader("Revisar itens")
-        st.caption("Você pode editar diretamente na tabela antes de gerar o XML.")
+        st.caption("Você pode editar diretamente na tabela antes de gerar o XML. Acentos, cedilha e símbolos não permitidos serão removidos automaticamente apenas do XML.")
         reviewed = st.data_editor(items, hide_index=True, num_rows="dynamic", use_container_width=True, key="xml_editor")
         cleaned = reviewed.copy()
         for col in cleaned.columns:
