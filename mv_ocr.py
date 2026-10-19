@@ -95,6 +95,13 @@ def extract_mv(data):
                 matches = re.findall(r"\d{2,7}", digits_text)
                 if matches:
                     code = max(matches, key=len)
+                if not code:
+                    # Confusao visual entre 7 e M no codigo da compressa.
+                    compact = re.sub(r"[^A-Z0-9]", "", digits_text.upper())
+                    row_words = " ".join(w.upper() for xx, yy, w in tokens
+                                         if .07 < xx < .265 and abs(yy-y) < 17)
+                    if "7M1" in compact and "COMPRESSA" in row_words and "GAZE" in row_words:
+                        code = "771"
             if not code:
                 continue
             seq_candidates = [(abs(yy-y), int(w)) for xx, yy, w in tokens
