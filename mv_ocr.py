@@ -146,6 +146,9 @@ def extract_mv(data):
             if description:
                 if description.strip().upper() == "PAR":
                     continue
+                # Artefato de OCR observado na requisição 10204.
+                if str(code).strip() == "111" and description.strip().upper() == "CAF COMPRIMIDO":
+                    continue
                 if code == "177" and "CORD CLAMP" in description.upper():
                     code = "777"
                 # Código é a chave: descrição do catálogo prevalece sobre OCR.
