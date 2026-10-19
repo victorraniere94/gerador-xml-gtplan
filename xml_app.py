@@ -1,4 +1,5 @@
 import io
+import time
 import re
 import unicodedata
 import xml.etree.ElementTree as ET
@@ -14,7 +15,7 @@ st.markdown("""<style>
 }
 [data-testid="stHeader"] { background: rgba(11,17,32,.94) !important; }
 [data-testid="stSidebar"], [data-testid="stSidebarContent"] { background: #101c30 !important; }
-.block-container { max-width: 1180px; padding-top: 2.3rem; padding-bottom: 4rem; }
+.block-container { max-width: 1500px; padding-top: 2.3rem; padding-bottom: 4rem; }
 h1 { letter-spacing: -.045em; font-weight: 800 !important; }
 h2,h3 { letter-spacing: -.025em; }
 [data-testid="stApp"] label, [data-testid="stApp"] [data-testid="stWidgetLabel"],
@@ -95,30 +96,44 @@ st.markdown("""<div class="gt-hero">
 <div class="gt-step"><b>02</b> Conferir produtos</div>
 <div class="gt-step"><b>03</b> Gerar XML</div>
 </div>""", unsafe_allow_html=True)
-st.info("Use somente arquivos autorizados. Este aplicativo é público. Confira os dados antes de importar no sistema de destino.")
-st.markdown("### 1. Origem do documento")
-
-col_formato, col_erp = st.columns(2, gap="large")
-with col_formato:
-    tipo_entrada = st.radio("Formato do arquivo de origem", ["Excel / CSV", "PDF (OCR)"], horizontal=True)
-with col_erp:
+st.caption("🔒 Use somente arquivos autorizados. Confira os dados antes de importar no sistema de destino.")
+st.markdown("### Painel de processamento")
+painel_upload, painel_resumo = st.columns([1, 2], gap="large")
+with painel_upload:
+    st.markdown("#### 📤 Enviar documento")
+    tipo_entrada = st.radio("Formato do arquivo", ["Excel / CSV", "PDF (OCR)"], horizontal=True)
     if tipo_entrada == "PDF (OCR)":
         erp = st.radio("ERP de origem", ["MV", "SPData", "Syshosp", "SMED"], horizontal=True)
+        arquivo = st.file_uploader("PDF da requisição (até 10 MB)", type=["pdf"], key="pdf_upload")
+        if erp not in ("MV", "SPData", "Syshosp"):
+            st.warning(f"A leitura automática do ERP {erp} ainda não foi configurada.")
     else:
         erp = None
-        st.caption("ERP de origem: não se aplica a Excel / CSV")
+        arquivo = st.file_uploader("Planilha Excel ou CSV (até 10 MB)", type=["xlsx", "csv"])
+        st.caption("Quantidade final, sem multiplicar por embalagem.")
+    with st.expander("⚙️ Configurações opcionais do XML"):
+        complemento = st.text_input("Complemento do código dos produtos", placeholder="Ex.: POLICLINICA", help="Acrescentado ao final de Codigo_Produto.")
+    if arquivo is not None:
+        st.caption(f"📄 {arquivo.name} · {len(arquivo.getvalue()) / 1048576:.2f} MB")
+        if arquivo.name.lower().endswith(".pdf"):
+            import fitz
+            try:
+                doc_info = fitz.open(stream=arquivo.getvalue(), filetype="pdf")
+                st.caption(f"📑 {doc_info.page_count} páginas")
+                doc_info.close()
+            except Exception:
+                pass
+with painel_resumo:
+    st.markdown("#### 📊 Indicadores")
+    if arquivo is None:
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Produtos extraídos", "—")
+        m2.metric("Dados preenchidos", "—")
+        m3.metric("Tempo de leitura", "—")
+        st.info("Envie um documento para visualizar os indicadores e conferir os produtos.")
+    else:
+        st.caption("Os indicadores da requisição aparecerão abaixo após a leitura do documento.")
 
-st.markdown("### 2. Enviar arquivo")
-if tipo_entrada == "PDF (OCR)":
-    arquivo = st.file_uploader("Enviar PDF da requisição (até 10 MB)", type=["pdf"], key="pdf_upload")
-    if erp not in ("MV", "SPData", "Syshosp"):
-        st.warning(f"A leitura automática do ERP {erp} ainda não foi configurada. Por enquanto, utilize MV, SPData, Syshosp ou Excel/CSV.")
-else:
-    arquivo = st.file_uploader("Importe Excel (.xlsx) ou CSV com código, descrição e quantidade (máximo 10 MB)", type=["xlsx", "csv"])
-    st.caption("A quantidade deve ser a quantidade final solicitada, sem multiplicação por embalagem. Códigos e descrições são mantidos como texto.")
-
-with st.expander("Configurações opcionais do XML", expanded=False):
-    complemento = st.text_input("Complemento do código dos produtos", placeholder="Ex.: POLICLINICA", help="Será acrescentado ao final de cada Codigo_Produto no XML.")
 # Campos fixos do layout WA, sem necessidade de preenchimento na interface.
 titulo = ""
 observacao = ""
@@ -202,7 +217,9 @@ if arquivo is not None:
         if tipo_entrada == "PDF (OCR)" and erp not in ("MV", "SPData", "Syshosp"):
             st.stop()
         with st.spinner("Lendo arquivo e identificando produtos... PDFs grandes podem demorar alguns minutos."):
+            inicio_leitura = time.perf_counter()
             df = load_table(arquivo)
+            duracao_leitura = time.perf_counter() - inicio_leitura
         if tipo_entrada == "PDF (OCR)":
             st.warning("Em PDFs grandes, o reconhecimento pode demorar alguns minutos. Confira todos os códigos, descrições e quantidades com o PDF original. No MV, use apenas Dados da Solicitação; no SPData e Syshosp, ignore Seq. e UND.")
             if df.empty:
@@ -252,10 +269,16 @@ if arquivo is not None:
         items = items.fillna("")
         if tipo_entrada == "PDF (OCR)" and erp == "MV" and not df.empty:
             st.download_button("Baixar conferência dos itens identificados (CSV)", data=df.to_csv(index=False, sep=";").encode("utf-8-sig"), file_name="conferencia_mv.csv", mime="text/csv")
-        st.markdown("### 3. Conferir produtos")
+        st.markdown("### 🧾 Conferir produtos")
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Produtos extraídos", len(items))
+        preenchidos = ((items["Código"].astype(str).str.strip() != "") & (items["Descrição"].astype(str).str.strip() != "") & (items["Quantidade"].astype(str).str.strip() != "")).sum()
+        m2.metric("Linhas preenchidas", int(preenchidos))
+        m3.metric("Tempo de leitura", f"{duracao_leitura:.1f} s")
+        st.caption("Linhas preenchidas não significam itens conferidos. A revisão com o documento original é obrigatória.")
         st.caption(f"Arquivo: {arquivo.name} • {len(items)} itens identificados")
         st.caption("Você pode editar diretamente na tabela antes de gerar o XML. As descrições serão mantidas exatamente como aparecem na tabela, inclusive acentos e espaços.")
-        reviewed = st.data_editor(items, hide_index=True, num_rows="dynamic", use_container_width=True, key="xml_editor")
+        reviewed = st.data_editor(items, hide_index=True, num_rows="dynamic", use_container_width=True, key="xml_editor", height=440)
         if tipo_entrada == "PDF (OCR)" and not df.empty:
             st.warning(f"O OCR encontrou {len(df)} item(ns). Confira no PDF se há mais itens e se todas as quantidades estão corretas.")
         cleaned = reviewed.copy()
@@ -283,7 +306,7 @@ if arquivo is not None:
             confirmado = st.checkbox("Conferi todos os códigos, descrições e quantidades com o PDF original.", value=False)
             if not confirmado:
                 errors.append("Confirme a conferência dos itens antes de baixar o XML.")
-        st.markdown("### 4. Gerar XML")
+        st.markdown("### 🟢 Gerar XML")
         if errors:
             for error in errors[:20]:
                 st.error(error)
@@ -299,6 +322,10 @@ if arquivo is not None:
             except UnicodeEncodeError:
                 st.error("Há caracteres que não podem ser gravados em ISO-8859-1. Revise os textos.")
                 st.stop()
+            with st.expander("🔎 Prévia do XML (Layout WA)"):
+                st.code(xml_data.decode("iso-8859-1")[:15000], language="xml")
+                if len(xml_data) > 15000:
+                    st.caption("Prévia parcial. O download contém o XML completo.")
             st.success("XML gerado. Confira o arquivo em ambiente de teste antes do uso definitivo.")
             st.download_button("Baixar XML", data=xml_data,
                                file_name="pedido.xml",
