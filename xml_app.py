@@ -139,21 +139,20 @@ with painel_upload:
                 doc_info.close()
             except Exception:
                 pass
-with painel_resumo:
-    resumo_placeholder = st.empty()
-
 def mostrar_painel(identificador_atual=None):
     """Indicadores do arquivo atual e histórico acumulado da sessão."""
     historico = st.session_state["historico_pedidos"]
     atual = historico.get(identificador_atual) if identificador_atual else None
     exportados = [pedido for pedido in historico.values() if pedido["Exportações"] > 0]
-    with resumo_placeholder.container():
+    with painel_resumo:
         st.markdown("#### 📊 Resumo do pedido atual")
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Pedido atual", atual["Pedido"] if atual else "Nenhum")
+        m1.metric("Pedido atual", "Carregado" if atual else "Aguardando")
         m2.metric("Produtos do pedido", atual["Produtos"] if atual else "—")
         m3.metric("XMLs solicitados deste pedido", atual["Exportações"] if atual else 0)
         m4.metric("Tempo de leitura", f'{atual["Tempo (s)"]:.1f} s' if atual and atual["Tempo (s)"] is not None else "—")
+        if atual:
+            st.caption(f"📄 Pedido atual: {atual['Pedido']}")
         st.markdown("##### Pedidos exportados nesta sessão")
         if exportados:
             st.dataframe(
