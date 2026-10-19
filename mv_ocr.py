@@ -63,47 +63,25 @@ def extract_mv(data):
                          if m]
                 if fused:
                     code = min(fused)[1]
-            if not code or len(code) <= 2:
-                strip = image.crop((int(width*.006), max(0, int(y-12)),
-                                    int(width*.072), min(image.height, int(y+17))))
-                raw_strip = pytesseract.image_to_string(
-                    strip.resize((strip.width*2, strip.height*2)),
-                    lang="por", config="--psm 6"
-                )
-                nums = re.findall(r"\d+", raw_strip)
-                seq_raw = sorted((abs(yy-y), w) for xx, yy, w in tokens
-                                 if xx < .026 and abs(yy-y) < 15
-                                 and re.fullmatch(r"\d{1,3}", w))
-                seq_text = seq_raw[0][1] if seq_raw else ""
-                for n in nums:
-                    if seq_text and n.startswith(seq_text) and len(n) > len(seq_text):
-                        suffix = n[len(seq_text):]
-                        if len(suffix) > len(code):
-                            code = suffix
-                    elif not code and len(n) >= 2 and n != seq_text:
-                        code = n
-            if not code or len(code) <= 2:
-                code_crop = image.crop((int(width*.023), max(0, int(y-18)),
-                                        int(width*.071), min(image.height, int(y+25))))
-                code_read = pytesseract.image_to_string(
-                    code_crop, lang="por", config="--psm 6"
-                )
-                candidates_code = re.findall(r"\d{2,7}", code_read)
-                if candidates_code:
-                    longest = max(candidates_code, key=len)
-                    if len(longest) > len(code):
-                        code = longest
+            # Releitura da célula de código sem misturar a coluna Seq.
+            if not code or len(code) <= 3:
+                crop = image.crop((int(width*.021), max(0, int(y-18)),
+                                   int(width*.072), min(image.height, int(y+25))))
+                reread = pytesseract.image_to_string(crop, lang="por", config="--psm 6")
+                nums = re.findall(r"\d{2,7}", reread)
+                if nums:
+                    if not code:
+                        code = max(nums, key=len)
+                    else:
+                        better = [n for n in nums if len(n)>len(code) and code in n]
+                        if better:
+                            code = max(better, key=len)
             if not code:
-                # Releitura apenas da célula do código em alta resolução.
-                crop = image.crop((int(width*.026), max(0, int(y-12)),
-                                   int(width*.071), min(image.height, int(y+30))))
-                reread = pytesseract.image_to_string(
-                    crop.resize((crop.width*2, crop.height*2)),
-                    lang="por", config="--psm 6"
-                )
-                found = re.search(r"\d{2,7}", reread)
-                if found:
-                    code = found.group()
+                fused = [(abs(yy-y), m.group(1)) for xx, yy, w in tokens
+                         if xx < .07 and abs(yy-y) < 15
+                         for m in [re.search(r"[/|]([0-9]{2,7})$", w)] if m]
+                if fused:
+                    code = min(fused)[1]
             if not code:
                 continue
             seq_candidates = [(abs(yy-y), int(w)) for xx, yy, w in tokens
@@ -129,6 +107,8 @@ def extract_mv(data):
             ]
             words.sort(key=lambda item: (round(item[0]/16), item[1]))
             description = " ".join(word for _, _, word in words).strip()
+            if re.fullmatch(r"(?:UNIDADE|PACOTE|CAIXA|FRASCO)(?:\s*/\s*\d+)?", description, re.I):
+                continue
             if description:
                 rows.append({
                     "Código": code, "Descrição": description,
