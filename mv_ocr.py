@@ -87,8 +87,8 @@ def extract_mv(data):
                 crop = image.crop((int(width*.026), max(0, int(y-12)),
                                    int(width*.071), min(image.height, int(y+30))))
                 reread = pytesseract.image_to_string(
-                    crop.resize((crop.width*3, crop.height*3)),
-                    lang="por", config="--psm 7 -c tessedit_char_whitelist=0123456789"
+                    crop.resize((crop.width*2, crop.height*2)),
+                    lang="por", config="--psm 6"
                 )
                 found = re.search(r"\\d{2,7}", reread)
                 if found:
