@@ -7,6 +7,20 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(page_title="Gerador XML GTPlan", page_icon="📄", layout="wide")
+st.markdown("""<style>
+:root {color-scheme: dark;}
+html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"],
+[data-testid="stHeader"], [data-testid="stMain"] {background-color:#0b1220 !important;color:#e5e7eb !important;}
+[data-testid="stSidebar"], [data-testid="stSidebarContent"] {background-color:#111c2e !important;}
+h1,h2,h3,p,label,span {color:inherit;}
+div[data-testid="stFileUploader"], div[data-testid="stExpander"],
+div[data-testid="stDataFrame"] {background-color:#111c2e !important;border:1px solid #34445e !important;border-radius:12px;}
+div[data-testid="stFileUploaderDropzone"] {background-color:#16243a !important;}
+div[data-baseweb="input"] > div, div[data-baseweb="select"] > div,
+textarea, input {background-color:#18263b !important;color:#f1f5f9 !important;border-color:#40516a !important;}
+div[data-testid="stAlert"] {border-radius:12px;}
+div.stDownloadButton button[kind="primary"] {background-color:#2563eb !important;color:white !important;}
+</style>""",unsafe_allow_html=True)
 st.markdown("""<style>.block-container{max-width:1200px;padding-top:2rem}h1{letter-spacing:-.03em}div[data-testid="stFileUploader"]{border:1px solid #cbd5e1;border-radius:12px;padding:12px}div.stDownloadButton button{border-radius:10px;font-weight:700}</style>""",unsafe_allow_html=True)
 st.title("Gerador de XML")
 st.caption("GTPlan  •  Layout WA  •  Conversão de Excel, CSV e PDF")
