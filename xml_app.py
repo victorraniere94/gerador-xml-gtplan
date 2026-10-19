@@ -140,22 +140,30 @@ with painel_upload:
             except Exception:
                 pass
 with painel_resumo:
-    st.markdown("#### 📊 Resumo da sessão")
+    resumo_placeholder = st.empty()
+
+def mostrar_painel(identificador_atual=None):
+    """Indicadores do arquivo atual e histórico acumulado da sessão."""
     historico = st.session_state["historico_pedidos"]
-    pedidos_exportados = [p for p in historico.values() if p["Exportações"] > 0]
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Pedidos diferentes", len(pedidos_exportados))
-    m2.metric("XMLs solicitados", sum(p["Exportações"] for p in pedidos_exportados))
-    m3.metric("Produtos nos pedidos", sum(p["Produtos"] for p in pedidos_exportados))
-    tempos = [p["Tempo (s)"] for p in pedidos_exportados if p["Tempo (s)"] is not None]
-    m4.metric("Tempo médio de leitura", f"{sum(tempos)/len(tempos):.1f} s" if tempos else "—")
-    if pedidos_exportados:
+    atual = historico.get(identificador_atual) if identificador_atual else None
+    exportados = [pedido for pedido in historico.values() if pedido["Exportações"] > 0]
+    with resumo_placeholder.container():
+        st.markdown("#### 📊 Resumo do pedido atual")
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Pedido atual", atual["Pedido"] if atual else "Nenhum")
+        m2.metric("Produtos do pedido", atual["Produtos"] if atual else "—")
+        m3.metric("XMLs solicitados deste pedido", atual["Exportações"] if atual else 0)
+        m4.metric("Tempo de leitura", f'{atual["Tempo (s)"]:.1f} s' if atual and atual["Tempo (s)"] is not None else "—")
         st.markdown("##### Pedidos exportados nesta sessão")
-        st.dataframe(pd.DataFrame(pedidos_exportados)[["Pedido", "Produtos", "Exportações", "Tempo (s)"]],
-                     hide_index=True, use_container_width=True, height=min(280, 45 + 36 * len(pedidos_exportados)))
-    else:
-        st.caption("Os pedidos aparecerão aqui individualmente após clicar em Baixar XML.")
-    st.caption("Dados apenas desta sessão. Exportações contabilizam cliques, não downloads concluídos.")
+        if exportados:
+            st.dataframe(
+                pd.DataFrame(exportados)[["Pedido", "Produtos", "Exportações", "Tempo (s)"]],
+                hide_index=True, use_container_width=True,
+                height=min(280, 45 + 36 * len(exportados))
+            )
+        else:
+            st.caption("O histórico aparecerá aqui depois de clicar em Baixar XML.")
+        st.caption("O resumo mostra apenas o pedido atual. A tabela acumula os pedidos exportados nesta sessão. Exportações representam cliques, não downloads concluídos.")
 
 # Campos fixos do layout WA, sem necessidade de preenchimento na interface.
 titulo = ""
@@ -250,6 +258,7 @@ if arquivo is not None:
                     "Pedido": arquivo.name, "Produtos": len(df),
                     "Exportações": 0, "Tempo (s)": round(duracao_leitura, 1)
                 }
+        mostrar_painel(identificador_pedido)
         if tipo_entrada == "PDF (OCR)":
             st.warning("Em PDFs grandes, o reconhecimento pode demorar alguns minutos. Confira todos os códigos, descrições e quantidades com o PDF original. No MV, use apenas Dados da Solicitação; no SPData e Syshosp, ignore Seq. e UND.")
             if df.empty:
@@ -366,4 +375,5 @@ if arquivo is not None:
     except Exception as exc:
         st.error(f"Não foi possível processar a planilha: {exc}")
 else:
+    mostrar_painel()
     st.info("Envie um arquivo para começar. Não é necessário instalar programas.")
