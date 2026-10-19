@@ -144,6 +144,10 @@ def extract_mv(data):
             if re.fullmatch(r"(?:UNIDADE|PACOTE|CAIXA|FRASCO)(?:\s*/\s*\d+)?", description, re.I):
                 continue
             if description:
+                if description.strip().upper() == "PAR":
+                    continue
+                if code == "177" and "CORD CLAMP" in description.upper():
+                    code = "777"
                 # Código é a chave: descrição do catálogo prevalece sobre OCR.
                 # Para códigos desconhecidos, preservar OCR e sinalizar revisão.
                 description = catalogo.get(str(code).strip(), description)
