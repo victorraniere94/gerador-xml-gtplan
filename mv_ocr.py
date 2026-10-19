@@ -3,6 +3,8 @@ A leitura é preliminar: todos os itens devem ser conferidos com o PDF.
 """
 import io
 import re
+import csv
+from pathlib import Path
 import fitz
 import pandas as pd
 import pytesseract
@@ -10,11 +12,23 @@ from PIL import Image
 
 NUMERO = re.compile(r"\d{1,3}(?:\.\d{3})*,\d+|\d+(?:[.,]\d+)?")
 
+def carregar_catalogo_mv():
+    """Carrega descrições oficiais por código, sem corrigir por similaridade."""
+    path = Path(__file__).with_name("catalogo_mv.csv")
+    if not path.is_file():
+        return {}
+    with path.open("r", encoding="utf-8-sig", newline="") as arquivo:
+        return {linha["Codigo"].strip(): linha["Descricao"]
+                for linha in csv.DictReader(arquivo)
+                if linha.get("Codigo") and linha.get("Descricao")}
+
+
 def extract_mv(data):
     pdf = fitz.open(stream=data, filetype="pdf")
     if pdf.page_count > 100:
         raise ValueError("O limite de segurança é de 100 páginas por PDF. Divida o arquivo em partes menores.")
     rows = []
+    catalogo = carregar_catalogo_mv()
     detected_sequences = []
     for page_number, page in enumerate(pdf, start=1):
         pix = page.get_pixmap(matrix=fitz.Matrix(3, 3), alpha=False)
@@ -130,6 +144,9 @@ def extract_mv(data):
             if re.fullmatch(r"(?:UNIDADE|PACOTE|CAIXA|FRASCO)(?:\s*/\s*\d+)?", description, re.I):
                 continue
             if description:
+                # Código é a chave: descrição do catálogo prevalece sobre OCR.
+                # Para códigos desconhecidos, preservar OCR e sinalizar revisão.
+                description = catalogo.get(str(code).strip(), description)
                 rows.append({
                     "Código": code, "Descrição": description,
                     "Quantidade": quantities[0][1]
@@ -137,4 +154,7 @@ def extract_mv(data):
     result = pd.DataFrame(rows, columns=["Código", "Descrição", "Quantidade"])
     result.attrs["mv_sequences"] = detected_sequences
     result.attrs["mv_product_rows"] = len(rows)
+    result.attrs["mv_catalogo_sem_correspondencia"] = [
+        str(row["Código"]) for row in rows if str(row["Código"]) not in catalogo
+    ]
     return result
