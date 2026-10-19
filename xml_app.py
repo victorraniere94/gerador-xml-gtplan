@@ -203,7 +203,7 @@ if arquivo is not None:
                 if sequencias:
                     st.metric("Linhas com Seq. reconhecida pelo OCR", len(sequencias))
                     if len(sequencias) != len(df):
-                        st.error(f"MV: {len(sequencias)} sequências reconhecidas e {len(df)} itens extraídos. Divergência: confira o PDF.")
+                        st.warning(f"MV: {len(sequencias)} sequências legíveis e {len(df)} itens extraídos. Seq. pode falhar no OCR; confira a contagem de produtos no PDF.")
                 if sequencias:
                     from collections import Counter
                     por_pagina = Counter(pagina for pagina, seq in sequencias)
@@ -258,10 +258,6 @@ if arquivo is not None:
                 errors.append(f"Linha {i + 2}: quantidade inválida.")
         st.write(f"**Exemplo de código no XML:** {cleaned.iloc[0]['Código'] + (' ' + complemento.strip() if complemento.strip() else '') if len(cleaned) else '(sem itens)'}")
         st.write(f"**Itens:** {len(cleaned)}")
-        if tipo_entrada == "PDF (OCR)" and erp == "MV":
-            mv_seq_count = len(df.attrs.get("mv_sequences", []))
-            if mv_seq_count != len(cleaned):
-                errors.append(f"MV: {mv_seq_count} sequências reconhecidas e {len(cleaned)} itens. Corrija a divergência antes de gerar o XML.")
         if tipo_entrada == "PDF (OCR)":
             total_esperado = st.number_input("Quantos produtos constam no PDF original?", min_value=1, value=max(1, len(cleaned)), step=1, help="Conte os itens de todas as páginas, não as linhas da descrição.")
             if len(cleaned) != total_esperado:
