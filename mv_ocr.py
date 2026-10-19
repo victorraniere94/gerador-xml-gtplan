@@ -52,7 +52,7 @@ def extract_mv(data):
         for y in candidates:
             code_tokens = [(abs(yy-y), w) for xx, yy, w in tokens
                            if .026 < xx < .07 and abs(yy-y) < 15
-                           and re.fullmatch(r"\\d{1,7}", w)]
+                           and re.fullmatch(r"\d{1,7}", w)]
             code_tokens.sort()
             code = code_tokens[0][1] if code_tokens else ""
             # Código pode estar colado ao Seq. (ex.: 7/9721).
@@ -101,14 +101,14 @@ def extract_mv(data):
                     crop.resize((crop.width*2, crop.height*2)),
                     lang="por", config="--psm 6"
                 )
-                found = re.search(r"\\d{2,7}", reread)
+                found = re.search(r"\d{2,7}", reread)
                 if found:
                     code = found.group()
             if not code:
                 continue
             seq_candidates = [(abs(yy-y), int(w)) for xx, yy, w in tokens
                               if xx < .026 and abs(yy-y) < 15
-                              and re.fullmatch(r"\\d{1,3}", w)]
+                              and re.fullmatch(r"\d{1,3}", w)]
             if seq_candidates:
                 detected_sequences.append((page_number, min(seq_candidates)[1]))
             codes.append((y, code))
