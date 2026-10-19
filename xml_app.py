@@ -8,6 +8,17 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(page_title="Gerador de XML", page_icon="📄", layout="wide")
+
+if "xml_downloads_sessao" not in st.session_state:
+    st.session_state["xml_downloads_sessao"] = 0
+if "xml_itens_exportados_sessao" not in st.session_state:
+    st.session_state["xml_itens_exportados_sessao"] = 0
+
+def registrar_download_xml(quantidade_itens):
+    """Contabiliza cliques em baixar XML nesta sessão, não downloads confirmados pelo navegador."""
+    st.session_state["xml_downloads_sessao"] += 1
+    st.session_state["xml_itens_exportados_sessao"] += quantidade_itens
+
 st.markdown("""<style>
 :root { color-scheme: dark; }
 [data-testid="stApp"], [data-testid="stAppViewContainer"], [data-testid="stMain"] {
@@ -126,12 +137,14 @@ with painel_upload:
 with painel_resumo:
     st.markdown("#### 📊 Indicadores")
     if arquivo is None:
-        m1, m2, m3 = st.columns(3)
+        m1, m2, m3, m4 = st.columns(4)
         m1.metric("Produtos extraídos", "—")
         m2.metric("Dados preenchidos", "—")
         m3.metric("Tempo de leitura", "—")
+        m4.metric("XMLs solicitados", st.session_state["xml_downloads_sessao"])
         st.info("Envie um documento para visualizar os indicadores e conferir os produtos.")
     else:
+        st.metric("XMLs solicitados nesta sessão", st.session_state["xml_downloads_sessao"])
         st.caption("Os indicadores da requisição aparecerão abaixo após a leitura do documento.")
 
 # Campos fixos do layout WA, sem necessidade de preenchimento na interface.
@@ -273,11 +286,13 @@ if arquivo is not None:
         items.columns = ["Código", "Descrição", "Quantidade"]
         items = items.fillna("")
         st.markdown("### 🧾 Conferir produtos")
-        m1, m2, m3 = st.columns(3)
+        m1, m2, m3, m4 = st.columns(4)
         m1.metric("Produtos extraídos", len(items))
         preenchidos = ((items["Código"].astype(str).str.strip() != "") & (items["Descrição"].astype(str).str.strip() != "") & (items["Quantidade"].astype(str).str.strip() != "")).sum()
         m2.metric("Linhas preenchidas", int(preenchidos))
         m3.metric("Tempo de leitura", f"{duracao_leitura:.1f} s")
+        m4.metric("XMLs solicitados", st.session_state["xml_downloads_sessao"])
+        st.caption("XMLs solicitados contabiliza cliques em Baixar XML nesta sessão, não confirma a conclusão do download. A contagem zera em uma nova sessão.")
         st.caption("Linhas preenchidas não significam itens conferidos. A revisão com o documento original é obrigatória.")
         st.caption(f"Arquivo: {arquivo.name} • {len(items)} itens identificados")
         st.caption("Você pode editar diretamente na tabela antes de gerar o XML. As descrições serão mantidas exatamente como aparecem na tabela, inclusive acentos e espaços.")
@@ -332,7 +347,8 @@ if arquivo is not None:
             st.success("XML gerado. Confira o arquivo em ambiente de teste antes do uso definitivo.")
             st.download_button("Baixar XML", data=xml_data,
                                file_name="pedido.xml",
-                               mime="application/xml", use_container_width=True, type="primary")
+                               mime="application/xml", use_container_width=True, type="primary",
+                               on_click=registrar_download_xml, args=(len(xml_items),))
     except Exception as exc:
         st.error(f"Não foi possível processar a planilha: {exc}")
 else:
