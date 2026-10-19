@@ -96,6 +96,17 @@ if arquivo is not None:
         df = load_table(arquivo)
         if tipo_entrada == "PDF (OCR)":
             st.warning("OCR do MV: confira cada código, descrição e quantidade solicitada. Nunca use Cons. Méd. Mensal, Est. Atual ou Última compra como quantidade.")
+            if df.empty:
+                st.error("O OCR não conseguiu identificar linhas com segurança. Confira o PDF abaixo e preencha os itens manualmente na tabela de revisão. Não serão inventados códigos ou quantidades.")
+            with st.expander("Visualizar página do PDF original para conferir", expanded=df.empty):
+                import fitz
+                from PIL import Image
+                pdf_doc = fitz.open(stream=arquivo.getvalue(), filetype="pdf")
+                for page_idx in range(min(pdf_doc.page_count, 15)):
+                    page = pdf_doc[page_idx]
+                    pix = page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5), alpha=False)
+                    preview = Image.open(io.BytesIO(pix.tobytes("png"))).rotate(270, expand=True)
+                    st.image(preview, caption=f"Página {page_idx + 1} — confira a orientação e os valores", use_container_width=True)
             st.caption("Se alguma linha não for reconhecida, acrescente-a manualmente na tabela abaixo.")
         a, b, c = st.columns(3)
         names = list(df.columns)
@@ -114,6 +125,8 @@ if arquivo is not None:
         st.subheader("Revisar itens")
         st.caption("Você pode editar diretamente na tabela antes de gerar o XML. Acentos, cedilha e símbolos não permitidos serão removidos automaticamente apenas do XML.")
         reviewed = st.data_editor(items, hide_index=True, num_rows="dynamic", use_container_width=True, key="xml_editor")
+        if tipo_entrada == "PDF (OCR)" and not df.empty:
+            st.warning(f"O OCR encontrou {len(df)} item(ns). Confira no PDF se há mais itens e se todas as quantidades estão corretas.")
         cleaned = reviewed.copy()
         for col in cleaned.columns:
             cleaned[col] = cleaned[col].astype(str).str.strip()
