@@ -1,96 +1,93 @@
-"""Leitura experimental de solicitações MV digitalizadas.
-A coluna Quantidade em Dados da Solicitação é a única fonte de quantidade.
-"""
+"""OCR do relatório MV, com leitura posicional da coluna de quantidade solicitada."""
 import io
 import re
+import fitz
 import numpy as np
 import pandas as pd
-import fitz
 from PIL import Image
 from rapidocr_onnxruntime import RapidOCR
 
-OCR = RapidOCR()
-UNITS = r"(?:UNIDADE|UND|UN|FRASCO|CAIXA|PACOTE|PECA|PEÇA|KIT|ROLO|PAR|LITRO|METRO|AMPOLA|BOLSA|COMPRIMIDO)"
-NUMBER = r"\d+(?:[.,]\d{1,3})?"
-ROW = re.compile(
-    rf"^\s*(\d{{3,}})\s+(.+?)\s+(?:[A-Z])\s+({UNITS})\s+({NUMBER})(?=\s|$)",
-    re.I
-)
+ocr_engine = RapidOCR()
+QUANT = re.compile(r"^\d{1,7}(?:[.,]\d{1,3})?$")
+CODE = re.compile(r"^\d{1,7}$")
 
-def _lines(image):
-    results, _ = OCR(np.array(image))
-    if not results:
-        return []
-    return [(float(min(p[1] for p in polygon)), float(min(p[0] for p in polygon)), str(text).strip())
-            for polygon, text, score in results if score >= 0.35 and str(text).strip()]
 
-def _recognize(page):
+def _tokens(img):
+    result, _ = ocr_engine(np.asarray(img))
+    tokens = []
+    for polygon, value, confidence in result or []:
+        if confidence < 0.30:
+            continue
+        x = min(float(p[0]) for p in polygon)
+        y = min(float(p[1]) for p in polygon)
+        tokens.append((x, y, str(value).strip()))
+    return tokens
+
+
+def _horizontal(page):
     pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
     img = Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB")
-    candidates = []
-    for angle in (0, 90, 270, 180):
-        rotated = img.rotate(angle, expand=True)
-        lines = _lines(rotated)
-        joined = " ".join(x[2].upper() for x in lines)
-        score = sum(word in joined for word in ("SOLICITA", "QUANTIDADE", "PRODUTO", "SEQ", "UNIDADE"))
-        score += sum(bool(re.search(r"\b\d{3,}\b", x[2])) for x in lines)
-        candidates.append((score, lines))
-    return max(candidates, key=lambda x: x[0])[1]
+    return img.rotate(270, expand=True)
 
-def _parse_layout(lines, width):
-    """Lê códigos e quantidades pela posição das colunas, nunca pela última compra."""
-    # Os recortes são proporcionais à largura da página já colocada na horizontal.
-    # Seq e código: 0-7%; produto: 7-25%; quantidade solicitada: 33-39%.
-    tokens = [(y, x, t) for y, x, t in lines]
-    candidates = []
-    for y, x, txt in tokens:
-        if x >= width * 0.075:
+
+def _parse(tokens, width):
+    # Referência: relatório MV enviado, em orientação horizontal.
+    # x relativo: sequência ~1%, código ~3%, produto 7-25%, quantidade solicitada ~38%.
+    # Última compra fica ~63% e nunca é consultada.
+    codes = []
+    for x, y, value in tokens:
+        if not (width * 0.025 <= x <= width * 0.065):
             continue
-        nearby = sorted(
-            [(xx, tt) for yy, xx, tt in tokens
-             if abs(yy - y) <= 13 and xx < width * 0.078],
-            key=lambda z: z[0]
-        )
-        left = " ".join(t for _, t in nearby)
-        match = re.search(r"(?<!\\d)(\\d{1,3})\\s+(\\d{1,7})(?!\\d)", left)
+        match = CODE.fullmatch(value)
         if not match:
-            continue
-        seq, code = match.groups()
-        if not any(abs(y - existing[0]) < 15 for existing in candidates):
-            candidates.append((y, code))
-    candidates.sort()
-    items = []
-    for idx, (y, code) in enumerate(candidates):
-        next_y = candidates[idx + 1][0] if idx + 1 < len(candidates) else float("inf")
-        row_tokens = [(yy, xx, tt) for yy, xx, tt in tokens if abs(yy - y) <= 15]
-        qty_tokens = [(xx, tt) for _, xx, tt in row_tokens
-                      if width * 0.325 <= xx <= width * 0.39]
-        qty_tokens.sort()
-        qty = next((m.group() for _, t in qty_tokens
-                    if (m := re.search(r"\\d+(?:[.,]\\d{1,3})?", t))), None)
-        description_parts = [
-            (yy, xx, tt) for yy, xx, tt in tokens
-            if y - 8 <= yy < min(y + 55, next_y - 10)
-            and width * 0.06 <= xx < width * 0.25
-            and not re.search(r"Rateio|C[oó]d\\.|Siaf|Siagem|Siafem", tt, re.I)
+            # Alguns OCRs agrupam os dois números da coluna Seq.
+            both = re.search(r"\b\d{1,3}\s+(\d{1,7})\b", value)
+            if not both:
+                continue
+            value = both.group(1)
+        # Só aceitar código se houver número de sequência na mesma linha à esquerda.
+        sequence = any(
+            xx < width * 0.027 and abs(yy - y) <= 14
+            and re.fullmatch(r"\d{1,3}", tt)
+            for xx, yy, tt in tokens
+        )
+        if sequence:
+            codes.append((y, value))
+    codes.sort()
+    result = []
+    for idx, (y, code) in enumerate(codes):
+        next_y = codes[idx + 1][0] if idx + 1 < len(codes) else float("inf")
+        qty_candidates = [
+            (abs(yy-y), xx, t)
+            for xx, yy, t in tokens
+            if width * 0.365 <= xx <= width * 0.425
+            and abs(yy - y) <= 20 and QUANT.fullmatch(t)
         ]
-        description_parts.sort(key=lambda z: (round(z[0] / 12), z[1]))
-        desc = " ".join(t for _, _, t in description_parts).strip()
-        if code and desc and qty:
-            items.append({"Código": code, "Descrição": desc, "Quantidade": qty})
-    return items
+        qty_candidates.sort()
+        # Não adivinhar quantidade quando OCR não reconhece a célula.
+        if not qty_candidates:
+            continue
+        qty = qty_candidates[0][2]
+        desc_tokens = [
+            (yy, xx, t) for xx, yy, t in tokens
+            if width * 0.065 <= xx <= width * 0.25
+            and y - 12 <= yy < min(y + 65, next_y - 12)
+            and not re.search(r"Rateio|Siaf|Siagem|Siafem|C[oó]d\.", t, re.I)
+        ]
+        desc_tokens.sort(key=lambda item: (round(item[0]/13), item[1]))
+        desc = " ".join(t for _, _, t in desc_tokens).strip()
+        if desc:
+            result.append({"Código": code, "Descrição": desc, "Quantidade": qty})
+    return result
 
 
 def extract_mv(data):
-    doc = fitz.open(stream=data, filetype="pdf")
-    if doc.page_count > 15:
+    document = fitz.open(stream=data, filetype="pdf")
+    if document.page_count > 15:
         raise ValueError("Limite de 15 páginas para PDFs.")
     rows = []
-    for page in doc:
-        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
-        img = Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB")
-        # Relatórios MV deste modelo chegam girados; a orientação correta é horizontal.
-        rotated = img.rotate(270, expand=True)
-        lines = _lines(rotated)
-        rows.extend(_parse_layout(lines, rotated.width))
+    for page in document:
+        image = _horizontal(page)
+        tokens = _tokens(image)
+        rows.extend(_parse(tokens, image.width))
     return pd.DataFrame(rows, columns=["Código", "Descrição", "Quantidade"])
