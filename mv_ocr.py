@@ -15,6 +15,7 @@ def extract_mv(data):
     if pdf.page_count > 100:
         raise ValueError("O limite de segurança é de 100 páginas por PDF. Divida o arquivo em partes menores.")
     rows = []
+    detected_sequences = []
     for page_number, page in enumerate(pdf, start=1):
         pix = page.get_pixmap(matrix=fitz.Matrix(3, 3), alpha=False)
         image = Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB")
@@ -40,6 +41,9 @@ def extract_mv(data):
                 for xx, yy, w in tokens
             ):
                 codes.append((y, word))
+                seq_candidates = [(abs(yy-y), int(w)) for xx, yy, w in tokens if xx < .026 and abs(yy-y) < 15 and re.fullmatch(r"\d{1,3}", w)]
+                if seq_candidates:
+                    detected_sequences.append((page_number, min(seq_candidates)[1]))
         codes.sort()
         for idx, (y, code) in enumerate(codes):
             next_y = codes[idx+1][0] if idx+1 < len(codes) else float("inf")
@@ -67,4 +71,6 @@ def extract_mv(data):
                     "Código": code, "Descrição": description,
                     "Quantidade": quantities[0][1]
                 })
-    return pd.DataFrame(rows, columns=["Código", "Descrição", "Quantidade"])
+    result = pd.DataFrame(rows, columns=["Código", "Descrição", "Quantidade"])
+    result.attrs["mv_sequences"] = detected_sequences
+    return result
