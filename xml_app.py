@@ -14,8 +14,9 @@ st.info("Use apenas planilhas autorizadas. Este aplicativo pode ser acessado por
 tipo_entrada = st.radio("Formato do arquivo de origem", ["Excel / CSV", "PDF (OCR)"], horizontal=True)
 if tipo_entrada == "PDF (OCR)":
     erp = st.selectbox("Selecione o ERP de origem do PDF", ["MV", "SPData", "Syshosp", "SMED"])
-    st.info(f"ERP selecionado: {erp}. A leitura de PDFs digitalizados ainda está em preparação. Envie um modelo de requisição desse ERP para configurarmos o reconhecimento com segurança.")
-    arquivo = None
+    arquivo = st.file_uploader("Enviar PDF da requisição (até 10 MB)", type=["pdf"], key="pdf_upload")
+    if erp != "MV":
+        st.warning(f"A leitura automática do ERP {erp} ainda não foi configurada. Por enquanto, utilize o modelo MV ou Excel/CSV.")
 else:
     arquivo = st.file_uploader("Importe Excel (.xlsx) ou CSV com código, descrição e quantidade (máximo 10 MB)", type=["xlsx", "csv"])
     st.caption("A quantidade deve ser a quantidade final solicitada, sem multiplicação por embalagem. Códigos e descrições são mantidos como texto.")
@@ -31,6 +32,9 @@ def load_table(upload):
     raw = upload.getvalue()
     if len(raw) > 10 * 1024 * 1024:
         raise ValueError("O arquivo ultrapassa 10 MB.")
+    if upload.name.lower().endswith(".pdf"):
+        from mv_ocr import extract_mv
+        return extract_mv(raw)
     if upload.name.lower().endswith(".xlsx"):
         sheet = st.selectbox("Aba da planilha", pd.ExcelFile(io.BytesIO(raw)).sheet_names)
         df = pd.read_excel(io.BytesIO(raw), sheet_name=sheet, dtype=str, keep_default_na=False)
@@ -79,7 +83,12 @@ def generate_xml(req, items, due_time, title, note, extra_name, extra_value):
 
 if arquivo is not None:
     try:
+        if tipo_entrada == "PDF (OCR)" and erp != "MV":
+            st.stop()
         df = load_table(arquivo)
+        if tipo_entrada == "PDF (OCR)":
+            st.warning("OCR do MV: confira cada código, descrição e quantidade solicitada. Nunca use Cons. Méd. Mensal, Est. Atual ou Última compra como quantidade.")
+            st.caption("Se alguma linha não for reconhecida, acrescente-a manualmente na tabela abaixo.")
         a, b, c = st.columns(3)
         names = list(df.columns)
         with a:
@@ -143,5 +152,4 @@ if arquivo is not None:
     except Exception as exc:
         st.error(f"Não foi possível processar a planilha: {exc}")
 else:
-    if tipo_entrada == "Excel / CSV":
-        st.info("Envie uma planilha para começar. Não é necessário instalar programas.")
+    st.info("Envie um arquivo para começar. Não é necessário instalar programas.")
