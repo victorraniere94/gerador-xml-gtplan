@@ -83,6 +83,19 @@ def extract_mv(data):
                 if fused:
                     code = min(fused)[1]
             if not code:
+                # OCR alternativo da célula: letras confundidas com dígitos.
+                # Recorte restrito à coluna Código; nunca usar Seq. como código.
+                digits_crop = image.crop((int(width*.020), max(0, int(y-12)),
+                                          int(width*.072), min(image.height, int(y+26))))
+                digits_crop = digits_crop.resize((digits_crop.width*3, digits_crop.height*3))
+                digits_text = pytesseract.image_to_string(
+                    digits_crop, lang="eng",
+                    config="--psm 6 -c tessedit_char_whitelist=0123456789"
+                )
+                matches = re.findall(r"\d{2,7}", digits_text)
+                if matches:
+                    code = max(matches, key=len)
+            if not code:
                 continue
             seq_candidates = [(abs(yy-y), int(w)) for xx, yy, w in tokens
                               if xx < .026 and abs(yy-y) < 15
