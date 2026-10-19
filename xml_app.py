@@ -31,10 +31,11 @@ else:
 
 complemento = st.text_input("Complemento opcional do código dos produtos", placeholder="Ex.: POLICLINICA", help="Será acrescentado ao final de cada Codigo_Produto no XML.")
 hora = st.text_input("Hora de vencimento", value="15:41")
-titulo = st.text_input("Título da PDC (opcional)")
-observacao = st.text_area("Observação (opcional)", height=75)
-campo_extra_nome = st.text_input("Nome do campo extra", value="Não Programada")
-campo_extra_valor = st.text_input("Valor do campo extra (opcional)")
+# Campos fixos do layout WA, sem necessidade de preenchimento na interface.
+titulo = ""
+observacao = ""
+campo_extra_nome = "Não Programada"
+campo_extra_valor = ""
 
 def load_table(upload):
     raw = upload.getvalue()
