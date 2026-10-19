@@ -23,8 +23,8 @@ with col_erp:
 
 if tipo_entrada == "PDF (OCR)":
     arquivo = st.file_uploader("Enviar PDF da requisição (até 10 MB)", type=["pdf"], key="pdf_upload")
-    if erp != "MV":
-        st.warning(f"A leitura automática do ERP {erp} ainda não foi configurada. Por enquanto, utilize o modelo MV ou Excel/CSV.")
+    if erp not in ("MV", "SPData"):
+        st.warning(f"A leitura automática do ERP {erp} ainda não foi configurada. Por enquanto, utilize MV, SPData ou Excel/CSV.")
 else:
     arquivo = st.file_uploader("Importe Excel (.xlsx) ou CSV com código, descrição e quantidade (máximo 10 MB)", type=["xlsx", "csv"])
     st.caption("A quantidade deve ser a quantidade final solicitada, sem multiplicação por embalagem. Códigos e descrições são mantidos como texto.")
@@ -42,6 +42,9 @@ def load_table(upload):
     if len(raw) > 10 * 1024 * 1024:
         raise ValueError("O arquivo ultrapassa 10 MB.")
     if upload.name.lower().endswith(".pdf"):
+        if erp == "SPData":
+            from spdata_reader import extract_spdata
+            return extract_spdata(raw)
         from mv_ocr import extract_mv
         return extract_mv(raw)
     if upload.name.lower().endswith(".xlsx"):
@@ -103,11 +106,11 @@ def generate_xml(req, items, due_time, title, note, extra_name, extra_value):
 
 if arquivo is not None:
     try:
-        if tipo_entrada == "PDF (OCR)" and erp != "MV":
+        if tipo_entrada == "PDF (OCR)" and erp not in ("MV", "SPData"):
             st.stop()
         df = load_table(arquivo)
         if tipo_entrada == "PDF (OCR)":
-            st.warning("OCR do MV: confira cada código, descrição e quantidade solicitada. Nunca use Cons. Méd. Mensal, Est. Atual ou Última compra como quantidade.")
+            st.warning("Confira todos os códigos, descrições e quantidades com o PDF original. No MV, use apenas Dados da Solicitação; no SPData, ignore Seq. e UND.")
             if df.empty:
                 st.error("O OCR não conseguiu identificar linhas com segurança. Confira o PDF abaixo e preencha os itens manualmente na tabela de revisão. Não serão inventados códigos ou quantidades.")
             with st.expander("Visualizar página do PDF original para conferir", expanded=df.empty):
