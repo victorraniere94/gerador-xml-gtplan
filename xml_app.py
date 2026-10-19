@@ -8,70 +8,93 @@ import streamlit as st
 
 st.set_page_config(page_title="Gerador XML GTPlan", page_icon="📄", layout="wide")
 st.markdown("""<style>
-:root {color-scheme: dark;}
-html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"],
-[data-testid="stHeader"], [data-testid="stMain"] {background-color:#0b1220 !important;color:#e5e7eb !important;}
-[data-testid="stSidebar"], [data-testid="stSidebarContent"] {background-color:#111c2e !important;}
-h1,h2,h3,p,label,span {color:inherit;}
-div[data-testid="stFileUploader"], div[data-testid="stExpander"],
-div[data-testid="stDataFrame"] {background-color:#111c2e !important;border:1px solid #34445e !important;border-radius:12px;}
-div[data-testid="stFileUploaderDropzone"] {background-color:#16243a !important;}
-div[data-baseweb="input"] > div, div[data-baseweb="select"] > div,
-textarea, input {background-color:#18263b !important;color:#f1f5f9 !important;border-color:#40516a !important;}
-div[data-testid="stAlert"] {border-radius:12px;}
-div.stDownloadButton button[kind="primary"] {background-color:#2563eb !important;color:white !important;}
-</style>""",unsafe_allow_html=True)
-st.markdown("""<style>.block-container{max-width:1200px;padding-top:2rem}h1{letter-spacing:-.03em}div[data-testid="stFileUploader"]{border:1px solid #cbd5e1;border-radius:12px;padding:12px}div.stDownloadButton button{border-radius:10px;font-weight:700}</style>""",unsafe_allow_html=True)
-st.markdown("""<style>
-/* Contraste consistente inclusive em controles do Streamlit */
-[data-testid="stApp"] {color:#f1f5f9 !important;}
-[data-testid="stApp"] label,
-[data-testid="stApp"] label *,
-[data-testid="stApp"] [data-testid="stWidgetLabel"],
-[data-testid="stApp"] [data-testid="stWidgetLabel"] *,
-[data-testid="stApp"] [role="radiogroup"] *,
-[data-testid="stApp"] [data-testid="stFileUploader"] *,
-[data-testid="stApp"] [data-testid="stExpander"] *,
-[data-testid="stApp"] [data-testid="stMarkdownContainer"] {
-  color:#f1f5f9 !important;
+:root { color-scheme: dark; }
+[data-testid="stApp"], [data-testid="stAppViewContainer"], [data-testid="stMain"] {
+  background: #0b1120 !important; color: #e7edf7 !important;
 }
-[data-testid="stApp"] [data-testid="stCaptionContainer"],
-[data-testid="stApp"] [data-testid="stCaptionContainer"] * {color:#cbd5e1 !important;}
-[data-testid="stFileUploaderDropzone"] {background:#18263b !important;border:1px dashed #64748b !important;}
-[data-testid="stFileUploaderDropzone"] button {color:#f8fafc !important;background:#334155 !important;border-color:#64748b !important;}
-[data-testid="stApp"] input, [data-testid="stApp"] textarea {color:#fff !important;}
-[data-testid="stApp"] input::placeholder {color:#aebdd0 !important;opacity:1;}
-[data-testid="stApp"] [data-testid="stAlert"] * {color:inherit;}
-</style>""",unsafe_allow_html=True)
-st.markdown("""<style>
-/* Botões de ação com contraste alto no tema escuro */
+[data-testid="stHeader"] { background: rgba(11,17,32,.94) !important; }
+[data-testid="stSidebar"], [data-testid="stSidebarContent"] { background: #101c30 !important; }
+.block-container { max-width: 1180px; padding-top: 2.3rem; padding-bottom: 4rem; }
+h1 { letter-spacing: -.045em; font-weight: 800 !important; }
+h2,h3 { letter-spacing: -.025em; }
+[data-testid="stApp"] label, [data-testid="stApp"] [data-testid="stWidgetLabel"],
+[data-testid="stApp"] [data-testid="stMarkdownContainer"] { color: #e7edf7; }
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] * { color: #aabbd3 !important; }
+[data-testid="stFileUploader"], [data-testid="stExpander"],
+[data-testid="stDataFrame"], [data-testid="stDataEditor"] {
+  background: #111e33 !important; border: 1px solid #2b405e !important;
+  border-radius: 16px !important;
+}
+[data-testid="stFileUploader"] { padding: 10px; }
+[data-testid="stFileUploaderDropzone"] {
+  background: #172740 !important; border: 1px dashed #5a81ad !important;
+  border-radius: 12px !important;
+}
+[data-testid="stFileUploaderDropzone"]:hover { border-color: #67b8ff !important; }
+[data-testid="stFileUploaderDropzone"] button {
+  background: #263e5c !important; border: 1px solid #496d98 !important;
+  color: #f8fbff !important; border-radius: 9px !important;
+}
+[data-baseweb="input"] > div, [data-baseweb="select"] > div,
+[data-testid="stApp"] textarea, [data-testid="stApp"] input {
+  background: #172740 !important; color: #f8fbff !important;
+  border-color: #425b7b !important;
+}
+[data-testid="stApp"] input::placeholder { color: #b1c1d6 !important; opacity: 1; }
+[data-testid="stAlert"] { border-radius: 12px !important; }
+[data-testid="stMetric"] {
+  background: #13233a; border: 1px solid #2c4667;
+  border-radius: 13px; padding: 14px 18px;
+}
+div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {
+  border-radius: 10px !important; font-weight: 700 !important;
+  min-height: 42px;
+}
 div[data-testid="stDownloadButton"] button {
-  background:#80c8fa !important;
-  border:1px solid #5aaeea !important;
-  border-radius:10px !important;
-  color:#080f1e !important;
-  font-weight:700 !important;
+  background: #80c8fa !important; border: 1px solid #80c8fa !important;
+  color: #091729 !important;
 }
-div[data-testid="stDownloadButton"] button *,
-div[data-testid="stDownloadButton"] button p,
-div[data-testid="stDownloadButton"] button span {
-  color:#080f1e !important;
-}
-div[data-testid="stDownloadButton"] button:disabled {
-  background:#344155 !important;
-  border-color:#526077 !important;
-  color:#cbd5e1 !important;
-}
-div[data-testid="stDownloadButton"] button:disabled * {color:#cbd5e1 !important;}
+div[data-testid="stDownloadButton"] button * { color: #091729 !important; }
 div[data-testid="stDownloadButton"] button[kind="primary"] {
-  background:#24864b !important;
-  border-color:#24864b !important;
-  color:#fff !important;
+  background: #22814d !important; border-color: #22814d !important;
+  color: #fff !important;
 }
-div[data-testid="stDownloadButton"] button[kind="primary"] * {color:#fff !important;}
+div[data-testid="stDownloadButton"] button[kind="primary"] * { color: #fff !important; }
+div[data-testid="stDownloadButton"] button:disabled {
+  background: #344155 !important; color: #cbd5e1 !important;
+}
+div[data-testid="stDownloadButton"] button:disabled * { color: #cbd5e1 !important; }
+.gt-hero {
+  padding: 22px 26px; border: 1px solid #2b4769; border-radius: 18px;
+  background: linear-gradient(115deg,#162943 0%,#101c31 75%);
+  margin-bottom: 18px;
+}
+.gt-eyebrow { color: #7ec8ff; font-size: .76rem; font-weight: 800; letter-spacing: .14em; }
+.gt-hero h1 { margin: 6px 0 4px; color: #f8fbff; font-size: clamp(1.8rem,3vw,2.6rem); }
+.gt-hero p { color: #afc4dd; margin: 0; }
+.gt-steps { display:flex; flex-wrap:wrap; gap:10px; margin: 8px 0 24px; }
+.gt-step {
+  flex:1; min-width:155px; padding:12px 15px; border-radius:12px;
+  background:#13233a; border:1px solid #2b405e; color:#dbe8f7;
+  font-size:.88rem; font-weight:600;
+}
+.gt-step b { color:#7ec8ff; margin-right:7px; }
+@media(max-width:640px) {
+  .block-container { padding: 1.2rem .9rem 3rem; }
+  .gt-hero { padding:18px; }
+  .gt-step { min-width:100%; }
+}
 </style>""", unsafe_allow_html=True)
-st.title("Gerador de XML")
-st.caption("GTPlan  •  Layout WA  •  Conversão de Excel, CSV e PDF")
+st.markdown("""<div class="gt-hero">
+<div class="gt-eyebrow">GTPLAN · LAYOUT WA</div>
+<h1>Gerador de XML</h1>
+<p>Converta requisições em XML com conferência dos produtos antes da exportação.</p>
+</div>
+<div class="gt-steps">
+<div class="gt-step"><b>01</b> Enviar arquivo</div>
+<div class="gt-step"><b>02</b> Conferir produtos</div>
+<div class="gt-step"><b>03</b> Gerar XML</div>
+</div>""", unsafe_allow_html=True)
 st.info("Use somente arquivos autorizados. Este aplicativo é público. Confira os dados antes de importar no GTPlan.")
 st.markdown("### 1. Origem do documento")
 
