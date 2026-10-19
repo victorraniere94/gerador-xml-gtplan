@@ -109,7 +109,7 @@ def generate_xml(req, items, due_time, title, note, extra_name, extra_value):
 
 if arquivo is not None:
     try:
-        if tipo_entrada == "PDF (OCR)" and erp not in ("MV", "SPData"):
+        if tipo_entrada == "PDF (OCR)" and erp not in ("MV", "SPData", "Syshosp"):
             st.stop()
         df = load_table(arquivo)
         if tipo_entrada == "PDF (OCR)":
@@ -123,7 +123,9 @@ if arquivo is not None:
                 for page_idx in range(min(pdf_doc.page_count, 15)):
                     page = pdf_doc[page_idx]
                     pix = page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5), alpha=False)
-                    preview = Image.open(io.BytesIO(pix.tobytes("png"))).rotate(270, expand=True)
+                    preview = Image.open(io.BytesIO(pix.tobytes("png")))
+                    if erp == "MV" and preview.height > preview.width:
+                        preview = preview.rotate(270, expand=True)
                     st.image(preview, caption=f"Página {page_idx + 1} — confira a orientação e os valores", use_container_width=True)
             st.caption("Se alguma linha não for reconhecida, acrescente-a manualmente na tabela abaixo.")
         a, b, c = st.columns(3)
