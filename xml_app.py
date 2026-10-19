@@ -183,7 +183,7 @@ if arquivo is not None:
                         if nums and max(nums) <= 500:
                             ausentes = sorted(set(range(1, max(nums) + 1)) - nums)
                             if ausentes:
-                                st.warning("Sequências não identificadas pelo OCR: " + ", ".join(map(str, ausentes)))
+                                st.caption("Números de sequência não reconhecidos com segurança (não representam necessariamente produtos ausentes): " + ", ".join(map(str, ausentes)))
         a, b, c = st.columns(3)
         names = list(df.columns)
         with a:
@@ -198,6 +198,8 @@ if arquivo is not None:
         items = df[[codigo, descricao, quantidade]].copy()
         items.columns = ["Código", "Descrição", "Quantidade"]
         items = items.fillna("")
+        if tipo_entrada == "PDF (OCR)" and erp == "MV" and not df.empty:
+            st.download_button("Baixar conferência dos itens identificados (CSV)", data=df.to_csv(index=False, sep=";").encode("utf-8-sig"), file_name="conferencia_mv.csv", mime="text/csv")
         st.markdown("### 3. Conferir produtos")
         st.caption(f"Arquivo: {arquivo.name} • {len(items)} itens identificados")
         st.caption("Você pode editar diretamente na tabela antes de gerar o XML. Acentos, cedilha e símbolos não permitidos serão removidos automaticamente apenas do XML.")
