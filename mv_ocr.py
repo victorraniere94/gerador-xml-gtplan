@@ -10,7 +10,7 @@ import pandas as pd
 import pytesseract
 from PIL import Image
 
-NUMERO = re.compile(r"\\d{1,3}(?:\\.\\d{3})*,\\d+|\\d+(?:[.,]\\d+)?")
+NUMERO = re.compile(r"\d{1,3}(?:\.\d{3})*,\d+|\d+(?:[.,]\d+)?")
 
 def quantidade_positiva(valor):
     """Descarta totais zerados e datas confundidas com quantidades pelo OCR."""
@@ -61,7 +61,7 @@ def extract_mv(data):
         # A linha de rateio também tem quantidade, mas não tem descrição/código.
         candidates = []
         for x, y, word in tokens:
-            if not (.365 < x < .43 and NUMERO.fullmatch(word) and quantidade_positiva(word)):
+            if not (.365 < x < .43 and NUMERO.fullmatch(word)):
                 continue
             if any(xx < .02 and abs(yy-y) < 13 and "rateio" in w.lower() for xx, yy, w in tokens):
                 continue
@@ -139,9 +139,12 @@ def extract_mv(data):
             next_y = codes[idx+1][0] if idx+1 < len(codes) else float("inf")
             quantities = [(abs(yy-y), word) for x, yy, word in tokens
                           if .365 < x < .43 and abs(yy-y) < 16
-                          and NUMERO.fullmatch(word) and quantidade_positiva(word)]
+                          and NUMERO.fullmatch(word)]
             quantities.sort()
             if not quantities:
+                continue
+            # A quantidade do item deve ser positiva; linhas de data/rodapé não são produtos.
+            if not quantidade_positiva(quantities[0][1]):
                 continue
             # Agrupar palavras da descrição respeitando a posição horizontal.
             words = [
