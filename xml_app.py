@@ -201,13 +201,29 @@ def load_table(upload):
         raise ValueError("O arquivo deve conter pelo menos três colunas.")
     return df
 
-def clean_xml_text(value):
-    """Preserva a descrição literal; XML/ISO-8859-1 não exige retirar acentos."""
+def clean_xml_text(value, campo="Texto"):
+    """Normaliza pontuação comum sem alterar acentos, códigos ou quantidades."""
     text = str(value)
-    # XML 1.0 não permite controles C0 (exceto tab, CR e LF).
-    text = "".join(ch for ch in text if ord(ch) in (9, 10, 13) or ord(ch) >= 32)
-    # Impede substituição silenciosa de caracteres incompatíveis com o layout.
-    text.encode("iso-8859-1", errors="strict")
+    substituicoes = {
+        "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
+        "\u2013": "-", "\u2014": "-", "\u2212": "-", "\u2022": "-",
+        "\u00a0": " ", "\u202f": " ", "\u200b": "",
+        "\u2010": "-", "\u2011": "-", "\u2026": "...",
+    }
+    text = "".join(substituicoes.get(ch, ch) for ch in text)
+    # XML 1.0 proíbe controles e substitutos Unicode.
+    text = "".join(ch for ch in text if ord(ch) in (9, 10, 13)
+                   or (32 <= ord(ch) <= 0xD7FF)
+                   or (0xE000 <= ord(ch) <= 0xFFFD)
+                   or (0x10000 <= ord(ch) <= 0x10FFFF))
+    try:
+        text.encode("iso-8859-1", errors="strict")
+    except UnicodeEncodeError as exc:
+        caractere = text[exc.start]
+        raise ValueError(
+            f"{campo}: caractere incompatível {caractere!r} "
+            f"(Unicode U+{ord(caractere):04X}). Corrija esse campo na tabela."
+        ) from exc
     return text
 
 
@@ -230,15 +246,15 @@ def generate_xml(req, items, due_time, title, note, extra_name, extra_value):
         ("Data_Vencimento", ""), ("Hora_Vencimento", due_time),
         ("Moeda", "Reais"), ("Observacao", note)
     ):
-        ET.SubElement(header, tag).text = clean_xml_text(value)
+        ET.SubElement(header, tag).text = clean_xml_text(value, f"Cabeçalho / {tag}")
     extra = ET.SubElement(header, "Campo_Extra")
-    ET.SubElement(extra, "Nome").text = clean_xml_text(extra_name)
-    ET.SubElement(extra, "Valor").text = clean_xml_text(extra_value)
+    ET.SubElement(extra, "Nome").text = clean_xml_text(extra_name, "Campo extra / Nome")
+    ET.SubElement(extra, "Valor").text = clean_xml_text(extra_value, "Campo extra / Valor")
     container = ET.SubElement(root, "Itens_Requisicao")
-    for item in items.itertuples(index=False, name=None):
+    for numero_item, item in enumerate(items.itertuples(index=False, name=None), start=1):
         node = ET.SubElement(container, "Item_Requisicao")
         for tag, value in zip(("Codigo_Produto", "Descricao_Produto", "Quantidade"), item):
-            ET.SubElement(node, tag).text = clean_xml_text(value)
+            ET.SubElement(node, tag).text = clean_xml_text(value, f"Produto {numero_item} / {tag}")
     ET.indent(root, space="  ")
     return ET.tostring(root, encoding="iso-8859-1", xml_declaration=True, short_empty_elements=False)
 
@@ -359,8 +375,8 @@ if arquivo is not None:
             try:
                 xml_data = generate_xml("", xml_items, "", titulo.strip(),
                                         observacao.strip(), campo_extra_nome.strip(), campo_extra_valor.strip())
-            except UnicodeEncodeError:
-                st.error("Há caracteres que não podem ser gravados em ISO-8859-1. Revise os textos.")
+            except (UnicodeEncodeError, ValueError) as exc:
+                st.error(f"Não foi possível gerar XML: {exc}")
                 st.stop()
             with st.expander("🔎 Prévia do XML (Layout WA)"):
                 st.code(xml_data.decode("iso-8859-1")[:15000], language="xml")
