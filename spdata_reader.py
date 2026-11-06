@@ -22,9 +22,9 @@ def _parse(text):
         # Quantidade é a coluna 9 (índice 8), não estoque, consumo ou aprovada.
         if line.lstrip().startswith("|"):
             cols = [part.strip() for part in line.strip().strip("|").split("|")]
-            if (len(cols) >= 9 and re.fullmatch(r"\\d{1,12}", cols[0])
-                    and cols[1] and re.fullmatch(r"\\d+(?:\\.\\d{3})*,\\d+|\\d+(?:[.,]\\d+)?", cols[8])):
-                description = re.sub(r"\\.{2,}\\s*$", "", cols[1]).strip()
+            if (len(cols) >= 9 and re.fullmatch(r"\d{1,12}", cols[0])
+                    and cols[1] and re.fullmatch(r"\d+(?:\.\d{3})*,\d+|\d+(?:[.,]\d+)?", cols[8])):
+                description = re.sub(r"\.{2,}\s*$", "", cols[1]).strip()
                 if description:
                     items.append({"Código": cols[0], "Descrição": description,
                                   "Quantidade": cols[8]})
