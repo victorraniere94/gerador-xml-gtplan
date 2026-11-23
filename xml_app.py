@@ -121,7 +121,7 @@ with painel_upload:
     if tipo_entrada == "PDF (OCR)":
         erp = st.radio("ERP de origem", ["MV", "SPData", "Syshosp", "SMED"], horizontal=True)
         arquivo = st.file_uploader("PDF da requisição (até 10 MB)", type=["pdf"], key="pdf_upload")
-        if erp not in ("MV", "SPData", "Syshosp"):
+        if erp not in ("MV", "SPData", "Syshosp", "SMED"):
             st.warning(f"A leitura automática do ERP {erp} ainda não foi configurada.")
     else:
         erp = None
@@ -181,6 +181,9 @@ def load_table(upload):
         if erp == "Syshosp":
             from syshosp_reader import extract_syshosp
             return extract_syshosp(raw)
+        if erp == "SMED":
+            from smed_reader import extract_smed
+            return extract_smed(raw)
         from mv_ocr import extract_mv
         return extract_mv(raw)
     if upload.name.lower().endswith(".xlsx"):
@@ -260,7 +263,7 @@ def generate_xml(req, items, due_time, title, note, extra_name, extra_value):
 
 if arquivo is not None:
     try:
-        if tipo_entrada == "PDF (OCR)" and erp not in ("MV", "SPData", "Syshosp"):
+        if tipo_entrada == "PDF (OCR)" and erp not in ("MV", "SPData", "Syshosp", "SMED"):
             st.stop()
         with st.spinner("Lendo arquivo e identificando produtos... PDFs grandes podem demorar alguns minutos."):
             inicio_leitura = time.perf_counter()
@@ -275,9 +278,9 @@ if arquivo is not None:
                 }
         mostrar_painel(identificador_pedido)
         if tipo_entrada == "PDF (OCR)":
-            st.warning("Em PDFs grandes, o reconhecimento pode demorar alguns minutos. Confira todos os códigos, descrições e quantidades com o PDF original. No MV, use apenas Dados da Solicitação; no SPData e Syshosp, ignore Seq. e UND.")
+            st.warning("Em PDFs grandes, o reconhecimento pode demorar alguns minutos. Confira todos os códigos, descrições e quantidades com o PDF original. No MV, use apenas Dados da Solicitação; no SPData e Syshosp, ignore Seq. e UND.; no SMED, use Cód., Produto e Qtd. Solicitada.")
             if df.empty:
-                st.error("O OCR não conseguiu identificar linhas com segurança. Confira o PDF abaixo e preencha os itens manualmente na tabela de revisão. Não serão inventados códigos ou quantidades.")
+                st.error("A leitura não conseguiu identificar linhas com segurança. Confira o PDF abaixo e preencha os itens manualmente na tabela de revisão. Não serão inventados códigos ou quantidades.")
             with st.expander("Visualizar páginas do PDF original para conferir", expanded=df.empty):
                 import fitz
                 from PIL import Image
@@ -339,7 +342,7 @@ if arquivo is not None:
         st.caption("Você pode editar diretamente na tabela antes de gerar o XML. As descrições serão mantidas exatamente como aparecem na tabela, inclusive acentos e espaços.")
         reviewed = st.data_editor(items, hide_index=True, num_rows="dynamic", use_container_width=True, key="xml_editor", height=370)
         if tipo_entrada == "PDF (OCR)" and not df.empty:
-            st.warning(f"O OCR encontrou {len(df)} item(ns). Confira no PDF se há mais itens e se todas as quantidades estão corretas.")
+            st.warning(f"A leitura encontrou {len(df)} item(ns). Confira no PDF se há mais itens e se todas as quantidades estão corretas.")
         cleaned = reviewed.copy()
         for col in cleaned.columns:
             cleaned[col] = cleaned[col].astype(str)
