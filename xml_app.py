@@ -278,7 +278,7 @@ if arquivo is not None:
                 }
         mostrar_painel(identificador_pedido)
         if tipo_entrada == "PDF (OCR)":
-            st.warning("Em PDFs grandes, o reconhecimento pode demorar alguns minutos. Confira todos os códigos, descrições e quantidades com o PDF original. No MV, use apenas Dados da Solicitação; no SPData e Syshosp, ignore Seq. e UND.; no SMED, use Cód., Produto e Qtd. Solicitada.")
+            st.warning("Em PDFs grandes, o reconhecimento pode demorar alguns minutos. Confira todos os códigos, descrições e quantidades com o PDF original. No MV, use apenas Dados da Solicitação; no SPData e Syshosp, ignore Seq. e UND. No SMED, use Cód., Produto e Qtd. Solicitada.")
             if df.empty:
                 st.error("A leitura não conseguiu identificar linhas com segurança. Confira o PDF abaixo e preencha os itens manualmente na tabela de revisão. Não serão inventados códigos ou quantidades.")
             with st.expander("Visualizar páginas do PDF original para conferir", expanded=df.empty):
